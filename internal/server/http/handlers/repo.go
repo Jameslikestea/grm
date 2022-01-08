@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
-	"grmpkg-ssh/internal/config"
+	"github.com/Jameslikestea/grm/internal/config"
 )
 
 func Repository(c *fiber.Ctx) error {

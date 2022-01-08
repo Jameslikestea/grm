@@ -8,9 +8,9 @@ import (
 	"github.com/gofiber/template/html"
 	"github.com/rs/zerolog/log"
 
-	"grmpkg-ssh/internal/config"
-	"grmpkg-ssh/internal/server/http/handlers"
-	"grmpkg-ssh/internal/server/http/middleware"
+	"github.com/Jameslikestea/grm/internal/config"
+	"github.com/Jameslikestea/grm/internal/server/http/handlers"
+	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 )
 
 type Server struct {

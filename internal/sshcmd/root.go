@@ -9,9 +9,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"grmpkg-ssh/internal/config"
-	"grmpkg-ssh/internal/server/http"
-	"grmpkg-ssh/internal/server/ssh"
+	"github.com/Jameslikestea/grm/internal/config"
+	"github.com/Jameslikestea/grm/internal/server/http"
+	"github.com/Jameslikestea/grm/internal/server/ssh"
 )
 
 var rootCmd *cobra.Command

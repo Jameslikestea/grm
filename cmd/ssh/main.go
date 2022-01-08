@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"grmpkg-ssh/internal/sshcmd"
+	"github.com/Jameslikestea/grm/internal/sshcmd"
 )
 
 func main() {

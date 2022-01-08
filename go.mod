@@ -1,4 +1,4 @@
-module grmpkg-ssh
+module github.com/Jameslikestea/grm
 
 go 1.17
 

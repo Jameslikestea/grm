@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 
-	"grmpkg-ssh/internal/config"
-	"grmpkg-ssh/internal/server/ssh/handler"
+	"github.com/Jameslikestea/grm/internal/config"
+	"github.com/Jameslikestea/grm/internal/server/ssh/handler"
 )
 
 type Server struct {
