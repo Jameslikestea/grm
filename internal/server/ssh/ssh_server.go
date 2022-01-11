@@ -12,11 +12,15 @@ import (
 
 	"github.com/Jameslikestea/grm/internal/config"
 	"github.com/Jameslikestea/grm/internal/server/ssh/handler"
+	"github.com/Jameslikestea/grm/internal/storage"
+	"github.com/Jameslikestea/grm/internal/storage/cql"
+	"github.com/Jameslikestea/grm/internal/storage/memory"
 )
 
 type Server struct {
 	c    *ssh.ServerConfig
 	pkey ssh.Signer
+	stor storage.Storage
 }
 
 func NewServer() *Server {
@@ -66,9 +70,24 @@ be prosecuted to the full extent of the law.
 
 	conf.AddHostKey(skey)
 
+	var stor storage.Storage
+
+	switch strings.ToUpper(config.GetStorageType()) {
+	case "MEMORY":
+		stor = memory.NewMemoryStorage()
+	// case "S3":
+	// 	stor = s3.NewS3Storage()
+	case "CQL":
+		stor = cql.NewCQLStorage()
+	default:
+		log.Warn().Msg("No Acceptable Storage Engine Chosen, Defaulting to In Memory")
+		stor = memory.NewMemoryStorage()
+	}
+
 	return &Server{
 		c:    conf,
 		pkey: skey,
+		stor: stor,
 	}
 }
 
@@ -107,7 +126,7 @@ func (s *Server) handleConnection(keyID string, chans <-chan ssh.NewChannel) {
 		if err != nil {
 			log.Warn().Err(err).Msg("Cannot accept SSH channel")
 		}
-		go handler.SSHChannelHandler(ch, reqs)
+		go handler.SSHChannelHandler(ch, reqs, s.stor)
 	}
 }
 

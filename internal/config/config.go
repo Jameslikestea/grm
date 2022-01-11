@@ -29,6 +29,19 @@ func SetDefaults() {
 	viper.SetDefault(logPath, "/var/log/grmpkg.log")
 	viper.SetDefault(logLevel, "INFO")
 	viper.SetDefault(logFile, true)
+
+	viper.SetDefault(storageType, "memory")
+
+	viper.SetDefault(storageS3Endpoint, "")
+	viper.SetDefault(storageS3AccessKey, "")
+	viper.SetDefault(storageS3SecretKey, "")
+	viper.SetDefault(storageS3SSL, true)
+	viper.SetDefault(storageS3Bucket, "grmpkg")
+
+	viper.SetDefault(storageCQLEndpoint, "")
+	viper.SetDefault(storageCQLUsername, "")
+	viper.SetDefault(storageCQLPassword, "")
+	viper.SetDefault(storageCQLKeyspace, "grmpkg")
 }
 
 func GetConfig() {
