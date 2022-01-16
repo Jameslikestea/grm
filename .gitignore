@@ -1,3 +1,4 @@
 *.log
 *.yml
+!pipeline.yml
 build/

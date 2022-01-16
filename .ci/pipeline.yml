@@ -1,0 +1,57 @@
+---
+resources:
+  - name: grm
+    type: git
+    icon: github
+    source:
+      uri: git@github.com:Jameslikestea/grm.git
+      private_key: ((grm_secrets.ssh_key))
+      branch: ((BRANCH))
+
+  - name: golang1.17
+    type: registry-image
+    source:
+      repository: golang
+      tag: 1.17
+
+  - name: golang1.18
+    type: registry-image
+    source:
+      repository: golang
+      tag: 1.18
+
+jobs:
+  - name: test_1.17
+    plan:
+      - get: grm
+        trigger: true
+      - get: golang1.17
+      - task: test
+        image: golang1.17
+        config:
+          platform: linux
+          inputs:
+            - name: grm
+          run:
+            dir: grm
+            path: go
+            args:
+              - test
+              - ./...
+  - name: test_1.18
+      plan:
+          - get: grm
+            trigger: true
+            - get: golang1.18
+            - task: test
+              image: golang1.18
+              config:
+                platform: linux
+                inputs:
+                  - name: grm
+                run:
+                  dir: grm
+                  path: go
+                  args:
+                    - test
+                    - ./...
