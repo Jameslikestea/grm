@@ -121,7 +121,7 @@ func (C CQLStorage) ListReferences(s string) ([]storage.Reference, error) {
 		log.Error().Err(err).Str("statement", stmt).Msg("Cannot Select package refs")
 	}
 
-	log.Info().Str("repo", s).Interface("refs", refs).Msg("Found Refs")
+	log.Info().Str("repo", s).Msg("Found Refs")
 	var rs []storage.Reference
 	for _, ref := range refs {
 		rs = append(rs, storage.Reference{Name: plumbing.ReferenceName(ref.Ref), Hash: plumbing.NewHash(ref.Hash)})

@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/Jameslikestea/grm/internal/git"
 	"github.com/Jameslikestea/grm/internal/storage"
 )
 
@@ -19,28 +20,21 @@ func SSHReceivePack(ch ssh.Channel, repo string, stor storage.Storage) {
 	refs := decodeRefs(ch)
 	objs := decodePack(ch, stor, repo)
 
+	mapper := map[plumbing.Hash]storage.Object{}
+	for _, obj := range objs {
+		mapper[obj.Hash] = obj
+	}
+
 	stor.StoreObjects(repo, objs)
 	stor.StoreReferences(repo, refs)
 }
 
 func advertiseRefs(ch ssh.Channel, stor storage.Storage, repo string) {
-	refs, _ := stor.ListReferences(repo)
-	e := pktline.NewEncoder(ch)
-	if len(refs) == 0 {
-		e.Encodef("%s %s\x00%s\n", plumbing.ZeroHash.String(), "capabilities^{}", "ofs-delta")
-		e.Flush()
-		return
+	refs, err := stor.ListReferences(repo)
+	if err != nil {
+		log.Error().Err(err).Msg("Cannot list references for advertise pack")
 	}
-
-	for i, ref := range refs {
-		if i == 0 {
-			e.Encodef("%s %s\x00%s\n", ref.Hash.String(), ref.Name, "ofs-delta")
-		} else {
-			e.Encodef("%s %s\n", ref.Hash.String(), ref.Name)
-		}
-	}
-
-	e.Flush()
+	git.GenerateReferencePack(refs, false, "git-receive-pack", ch)
 }
 
 func decodeRefs(ch ssh.Channel) []storage.Reference {
@@ -90,7 +84,10 @@ func decodePack(ch ssh.Channel, stor storage.Storage, repo string) []storage.Obj
 	btyp := map[int64]plumbing.ObjectType{}
 	htyp := map[plumbing.Hash]plumbing.ObjectType{}
 
-	obs, _ := stor.ListObjects(repo)
+	obs, err := stor.ListObjects(repo)
+	if err != nil {
+		log.Error().Err(err).Msg("Cannot get objects from DB")
+	}
 	for _, obj := range obs {
 		hahs[obj.Hash] = obj.Content
 		htyp[obj.Hash] = obj.Type
