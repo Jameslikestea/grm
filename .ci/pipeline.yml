@@ -14,11 +14,11 @@ resources:
       repository: golang
       tag: 1.17
 
-  - name: golang1.18
+  - name: golang1.16
     type: registry-image
     source:
       repository: golang
-      tag: 1.18
+      tag: 1.16
 
 jobs:
   - name: test_1.17
@@ -42,9 +42,9 @@ jobs:
     plan:
       - get: grm
         trigger: true
-      - get: golang1.18
+      - get: golang1.16
       - task: test
-        image: golang1.18
+        image: golang1.16
         config:
           platform: linux
           inputs:
