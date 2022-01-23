@@ -48,11 +48,11 @@ jobs:
               state: pending
               context: 1.17-test
           - put: grm-status
-              inputs:
-                - grm
-              params:
-                state: pending
-                context: 1.16-test
+            inputs:
+              - grm
+            params:
+              state: pending
+              context: 1.16-test
 
   - name: test_1.17
     on_failure:
