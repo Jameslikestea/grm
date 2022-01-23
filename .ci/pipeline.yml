@@ -1,5 +1,19 @@
 ---
+resource_types:
+  - name: cogito
+    type: registry-image
+    check_every: 1h
+    source:
+      repository: pix4d/cogito
 resources:
+  - name: grm-status
+    type: cogito
+    check_every: 1h
+    source:
+      owner: Jameslikestea
+      repo: grm
+      access_token: ((grm_secrets.github_token))
+
   - name: grm
     type: git
     icon: github
@@ -21,10 +35,54 @@ resources:
       tag: 1.16
 
 jobs:
-  - name: test_1.17
+  - name: generate_checks
     plan:
       - get: grm
         trigger: true
+      - in_parallel:
+          limit: 2
+          fail_fast: true
+          steps:
+            - put: grm-status
+              inputs:
+                - grm
+              params:
+                state: pending
+                context: 1.17-test
+            - put: grm-status
+              inputs:
+                - grm
+              params:
+                state: pending
+                context: 1.16-test
+
+  - name: test_1.17
+    on_failure:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: failure
+        context: 1.17-test
+    on_success:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: success
+        context: 1.17-test
+    on_error:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: error
+        context: 1.17-test
+    plan:
+      - get: grm
+        trigger: true
+        passed:
+          - generate_checks
       - get: golang1.17
       - task: test
         image: golang1.17
@@ -38,10 +96,33 @@ jobs:
             args:
               - test
               - ./...
-  - name: test_1.18
+  - name: test_1.16
+    on_failure:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: failure
+        context: 1.16-test
+    on_success:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: success
+        context: 1.16-test
+    on_error:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: error
+        context: 1.16-test
     plan:
       - get: grm
         trigger: true
+        passed:
+          - generate_checks
       - get: golang1.16
       - task: test
         image: golang1.16
