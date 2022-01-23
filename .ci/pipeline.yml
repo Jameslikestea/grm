@@ -35,6 +35,25 @@ resources:
       tag: 1.16
 
 jobs:
+  - name: generate_checks
+    plan:
+      - get: grm
+        trigger: true
+      - in_parallel:
+        steps:
+          - put: grm-status
+            inputs:
+              - grm
+            params:
+              state: pending
+              context: 1.17-test
+          - put: grm-status
+              inputs:
+                - grm
+              params:
+                state: pending
+                context: 1.16-test
+
   - name: test_1.17
     on_failure:
       put: grm-status
@@ -60,13 +79,9 @@ jobs:
     plan:
       - get: grm
         trigger: true
+        passed:
+          - generate_checks
       - get: golang1.17
-      - put: grm-status
-        inputs:
-          - grm
-        params:
-          state: pending
-          context: 1.17-test
       - task: test
         image: golang1.17
         config:
@@ -104,13 +119,9 @@ jobs:
     plan:
       - get: grm
         trigger: true
+        passed:
+          - generate_checks
       - get: golang1.16
-      - put: grm-status
-        inputs:
-          - grm
-        params:
-          state: pending
-          context: 1.16-test
       - task: test
         image: golang1.16
         config:
