@@ -40,19 +40,21 @@ jobs:
       - get: grm
         trigger: true
       - in_parallel:
-        steps:
-          - put: grm-status
-            inputs:
-              - grm
-            params:
-              state: pending
-              context: 1.17-test
-          - put: grm-status
-            inputs:
-              - grm
-            params:
-              state: pending
-              context: 1.16-test
+          limit: 2
+          fail_fast: true
+          steps:
+            - put: grm-status
+              inputs:
+                - grm
+              params:
+                state: pending
+                context: 1.17-test
+            - put: grm-status
+              inputs:
+                - grm
+              params:
+                state: pending
+                context: 1.16-test
 
   - name: test_1.17
     on_failure:
