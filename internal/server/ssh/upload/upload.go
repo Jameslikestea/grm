@@ -2,10 +2,13 @@ package upload
 
 import (
 	"bytes"
+	"io"
 	"strings"
 
+	packfile2 "gg-scm.io/pkg/git/packfile"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/pktline"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 
@@ -17,6 +20,8 @@ func SSHUploadPack(ch ssh.Channel, repo string, stor storage.Storage) {
 	advertiseRefs(ch, stor, repo)
 	wants, haves, _ := decodeRefs(ch, stor, repo)
 	objs := getNewObjects(stor, repo, wants, haves)
+	ch.Write([]byte("0008NAK\n"))
+	encode(ch, objs)
 
 	log.Trace().Int("objs", len(objs)).Msg("Counted number of objects")
 
@@ -86,18 +91,135 @@ func getNewObjects(
 		return nil
 	}
 	cache := map[plumbing.Hash]storage.Object{}
+	seen := map[plumbing.Hash]bool{}
+
 	for _, obj := range objs {
 		cache[obj.Hash] = obj
 	}
 
-	for _, want := range wants {
-		c, ok := cache[want]
-		log.Trace().Str("hash", want.String()).Bool("found", ok).Msg("Searching for objects")
-		if !ok {
-			continue
-		}
-		log.Trace().Str("type", c.Type.String()).Msg("Found hash")
+	log.Info().Int("haves", len(haves)).Msg("Haves")
+	for key := range haves {
+		recurseFound(cache, seen, key)
 	}
 
-	return nil
+	log.Info().Int("seen", len(seen)).Msg("Found Seen")
+
+	newObjs := map[plumbing.Hash]storage.Object{}
+	for _, want := range wants {
+		recurseFind(cache, newObjs, seen, want)
+	}
+
+	log.Info().Int("discovered", len(newObjs)).Msg("Found New")
+	objList := make([]storage.Object, len(newObjs))
+	i := 0
+	for _, obj := range newObjs {
+		objList[i] = obj
+		i++
+	}
+
+	return objList
+}
+
+func recurseFound(cache map[plumbing.Hash]storage.Object, seen map[plumbing.Hash]bool, hash plumbing.Hash) {
+	// Do nothing if we've already seen the hash, prevents circular searching
+	if _, ok := seen[hash]; ok {
+		log.Trace().Str("hash", hash.String()).Msg("Already seen hash")
+		return
+	}
+	seen[hash] = true
+	obj, ok := cache[hash]
+	if !ok {
+		// We don't need to throw an error as this will be handled elsewhere
+		return
+	}
+	m := &plumbing.MemoryObject{}
+	switch obj.Type {
+	case plumbing.CommitObject:
+		log.Trace().Msg("Searching Commit")
+		m.SetType(obj.Type)
+		m.SetSize(int64(len(obj.Content)))
+		m.Write(obj.Content)
+
+		c := object.Commit{}
+		c.Decode(m)
+		recurseFound(cache, seen, c.TreeHash)
+		for _, ph := range c.ParentHashes {
+			recurseFound(cache, seen, ph)
+		}
+
+	case plumbing.TreeObject:
+		log.Trace().Msg("Searching Tree")
+		m.SetType(obj.Type)
+		m.SetSize(int64(len(obj.Content)))
+		m.Write(obj.Content)
+
+		c := object.Tree{}
+		c.Decode(m)
+
+		for _, entry := range c.Entries {
+			recurseFound(cache, seen, entry.Hash)
+		}
+	}
+
+}
+
+func recurseFind(
+	cache, objs map[plumbing.Hash]storage.Object,
+	seen map[plumbing.Hash]bool,
+	hash plumbing.Hash,
+) {
+	if _, ok := seen[hash]; ok {
+		return
+	}
+	obj, ok := cache[hash]
+	if !ok {
+		return
+	}
+	// Setup the object and mark as now seen
+	objs[hash] = obj
+	seen[hash] = true
+
+	m := &plumbing.MemoryObject{}
+	switch obj.Type {
+	case plumbing.CommitObject:
+		m.SetType(obj.Type)
+		m.SetSize(int64(len(obj.Content)))
+		m.Write(obj.Content)
+
+		c := object.Commit{}
+		c.Decode(m)
+		recurseFind(cache, objs, seen, c.TreeHash)
+		for _, ph := range c.ParentHashes {
+			recurseFind(cache, objs, seen, ph)
+		}
+
+	case plumbing.TreeObject:
+		m.SetType(obj.Type)
+		m.SetSize(int64(len(obj.Content)))
+		m.Write(obj.Content)
+
+		c := object.Tree{}
+		c.Decode(m)
+
+		for _, entry := range c.Entries {
+			recurseFind(cache, objs, seen, entry.Hash)
+		}
+	}
+
+}
+
+func encode(w io.Writer, objs []storage.Object) {
+	writer := packfile2.NewWriter(w, uint32(len(objs)))
+
+	for _, obj := range objs {
+		hdr := &packfile2.Header{
+			Type: packfile2.ObjectType(obj.Type),
+			Size: int64(len(obj.Content)),
+		}
+
+		writer.WriteHeader(hdr)
+		writer.Write(obj.Content)
+	}
+
+	writer.Close()
 }
