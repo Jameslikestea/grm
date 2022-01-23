@@ -2,3 +2,4 @@
 *.yml
 !pipeline.yml
 build/
+.idea
