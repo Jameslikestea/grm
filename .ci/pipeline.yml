@@ -61,6 +61,12 @@ jobs:
       - get: grm
         trigger: true
       - get: golang1.17
+      - put: grm-status
+        inputs:
+          - grm
+        params:
+          state: pending
+          context: 1.17-test
       - task: test
         image: golang1.17
         config:
@@ -99,6 +105,12 @@ jobs:
       - get: grm
         trigger: true
       - get: golang1.16
+      - put: grm-status
+        inputs:
+          - grm
+        params:
+          state: pending
+          context: 1.16-test
       - task: test
         image: golang1.16
         config:
