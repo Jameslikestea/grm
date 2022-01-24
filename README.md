@@ -1,5 +1,7 @@
 # GRM - Go Resource Manager
 
+![CI](https://ci.grmpkg.com/api/v1/teams/grm/pipelines/master/badge)
+
 This is the second attempt at building a Go Resource Manager. This project serves immutable git tags, it prevents users
 from deleting projects, versions and other resources that might have become key in other projects which could cause them
 to fail builds tests etc.
