@@ -27,7 +27,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    false,
 				service: "git-receive-pack",
 			},
-			wantWriter: "00470000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta\n0000",
+			wantWriter: "005b0000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta thin-pack multi_ack\n0000",
 		},
 		{
 			name: "HTTP No References Receive Pack",
@@ -36,7 +36,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    true,
 				service: "git-receive-pack",
 			},
-			wantWriter: "001f# service=git-receive-pack\n00470000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta\n0000",
+			wantWriter: "001f# service=git-receive-pack\n005b0000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta thin-pack multi_ack\n0000",
 		},
 		{
 			name: "SSH Single Reference",
@@ -50,7 +50,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    false,
 				service: "git-receive-pack",
 			},
-			wantWriter: "00480000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta\n0000",
+			wantWriter: "005c0000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta thin-pack multi_ack\n0000",
 		},
 		{
 			name: "HTTP Single Reference",
@@ -64,7 +64,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    true,
 				service: "git-receive-pack",
 			},
-			wantWriter: "001f# service=git-receive-pack\n00480000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta\n0000",
+			wantWriter: "001f# service=git-receive-pack\n005c0000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta thin-pack multi_ack\n0000",
 		},
 		{
 			name: "SSH Multi Reference",
@@ -82,7 +82,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    false,
 				service: "git-receive-pack",
 			},
-			wantWriter: "00480000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta\n003e0000000000000000000000000000000012341234 refs/tags/v2.0.0\n0000",
+			wantWriter: "005c0000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta thin-pack multi_ack\n003e0000000000000000000000000000000012341234 refs/tags/v2.0.0\n0000",
 		},
 		{
 			name: "HTTP Multi Reference",
@@ -100,7 +100,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    true,
 				service: "git-receive-pack",
 			},
-			wantWriter: "001f# service=git-receive-pack\n00480000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta\n003e0000000000000000000000000000000012341234 refs/tags/v2.0.0\n0000",
+			wantWriter: "001f# service=git-receive-pack\n005c0000000000000000000000000000000043214321 refs/tags/v1.0.0\x00ofs-delta thin-pack multi_ack\n003e0000000000000000000000000000000012341234 refs/tags/v2.0.0\n0000",
 		},
 	}
 	for _, tt := range tests {
