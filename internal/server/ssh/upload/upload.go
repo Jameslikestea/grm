@@ -19,6 +19,8 @@ import (
 func SSHUploadPack(ch ssh.Channel, repo string, stor storage.Storage) {
 	advertiseRefs(ch, stor, repo)
 	wants, haves, _ := decodeRefs(ch, stor, repo)
+
+	log.Info().Int("haves", len(haves)).Msg("Received Haves")
 	objs := getNewObjects(stor, repo, wants, haves)
 	ch.Write([]byte("0008NAK\n"))
 	encode(ch, objs)
@@ -46,10 +48,19 @@ func decodeRefs(ch ssh.Channel, stor storage.Storage, repo string) (
 
 	e := pktline.NewScanner(ch)
 	e.Scan()
+
+	flush_count := 0
 	for {
 		b := e.Bytes()
-		if bytes.Equal(b, pktline.Flush) {
-			return wants, haves, capabilities
+		log.Trace().Bytes("content", b).Msg("Received pktline")
+		if bytes.Equal(b, pktline.Flush) || bytes.Equal(b, []byte("done\n")) {
+			flush_count++
+			log.Trace().Msg("Received pktline.Flush")
+			if flush_count == 2 {
+				return wants, haves, capabilities
+			}
+			e = pktline.NewScanner(ch)
+			e.Scan()
 		}
 		c := string(b)
 		c = strings.TrimSpace(c)
@@ -67,10 +78,13 @@ func decodeRefs(ch ssh.Channel, stor storage.Storage, repo string) (
 
 		switch types[0] {
 		case "want":
+			log.Trace().Str("hash", h.String()).Msg("Got Want")
 			wants = append(wants, h)
 		case "have":
+			log.Trace().Str("hash", h.String()).Msg("Got Have")
 			haves[h] = true
 		default:
+			log.Trace().Str("hash", h.String()).Str("type", types[0]).Msg("Defaulting")
 			continue
 		}
 		if ok := e.Scan(); !ok {
