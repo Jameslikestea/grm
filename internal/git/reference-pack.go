@@ -15,11 +15,16 @@ func GenerateReferencePack(refs []storage.Reference, http bool, service string, 
 		e.Encodef("# service=%s\n", service)
 	}
 	if len(refs) == 0 {
-		e.Encodef("%s %s\x00%s\n", plumbing.ZeroHash.String(), "capabilities^{}", "ofs-delta")
+		e.Encodef(
+			"%s %s\x00%s\n",
+			plumbing.ZeroHash.String(),
+			"capabilities^{}",
+			"ofs-delta thin-pack multi_ack",
+		)
 	}
 	for i, ref := range refs {
 		if i == 0 {
-			e.Encodef("%s %s\x00%s\n", ref.Hash.String(), ref.Name, "ofs-delta")
+			e.Encodef("%s %s\x00%s\n", ref.Hash.String(), ref.Name, "ofs-delta thin-pack multi_ack")
 			continue
 		}
 		e.Encodef("%s %s\n", ref.Hash.String(), ref.Name)
