@@ -3,3 +3,4 @@
 !pipeline.yml
 build/
 .idea
+!.github/
