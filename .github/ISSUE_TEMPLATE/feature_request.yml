@@ -1,0 +1,27 @@
+---
+name: Feature Request
+description: Request a feature
+title: "[Feature]: "
+labels:
+  - feature
+  - new
+assignees:
+  - Jameslikestea
+body:
+  - type: input
+    id: email
+    attributes:
+      label: Email Address
+      description: Give us an email address for how we can get in contact with you
+      placehodler: ex. john@doe.com
+  - type: input
+    id: tldr
+    attributes:
+      label: TL;DR
+      description: A brief summary of what you would like the project to do
+      placeholder: Support FTP downloads
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A longer description of what you'd like to see, how it might be implemented and why you need it.
