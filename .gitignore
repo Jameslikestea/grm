@@ -4,3 +4,6 @@
 build/
 .idea
 !.github/**/*.yml
+!examples/**/*
+*.deb
+*.rpm

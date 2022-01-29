@@ -1,0 +1,26 @@
+domain: example.com
+http:
+  interface: 127.0.0.1
+  port: "8080"
+log:
+  file: true
+  level: WARN
+  path: /var/log/grmpkg.log
+ssh:
+  interface: 127.0.0.1
+  keypath: /etc/grmpkg_hostkey
+  port: "2222"
+  username: git
+storage:
+  cql:
+    endpoint: localhost:9042
+    keyspace: grmpkg
+    password: ""
+    username: ""
+  s3:
+    access_key: ""
+    bucket: ""
+    endpoint: ""
+    secret_key: ""
+    ssl: true
+  type: cql

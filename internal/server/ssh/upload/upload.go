@@ -1,9 +1,7 @@
 package upload
 
 import (
-	"bytes"
 	"io"
-	"strings"
 
 	packfile2 "gg-scm.io/pkg/git/packfile"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -43,54 +41,67 @@ func decodeRefs(ch ssh.Channel, stor storage.Storage, repo string) (
 	map[string]bool,
 ) {
 	wants := []plumbing.Hash{}
-	haves := map[plumbing.Hash]bool{}
-	capabilities := map[string]bool{}
+	var haves map[plumbing.Hash]bool
+	// capabilities := map[string]bool{}
 
 	e := pktline.NewScanner(ch)
 	e.Scan()
 
-	flush_count := 0
-	for {
-		b := e.Bytes()
-		log.Trace().Bytes("content", b).Msg("Received pktline")
-		if bytes.Equal(b, pktline.Flush) || bytes.Equal(b, []byte("done\n")) {
-			flush_count++
-			log.Trace().Msg("Received pktline.Flush")
-			if flush_count == 2 {
-				return wants, haves, capabilities
-			}
-			e = pktline.NewScanner(ch)
-			e.Scan()
-		}
-		c := string(b)
-		c = strings.TrimSpace(c)
-		types := strings.Split(c, " ")
-		if len(types) < 2 {
-			continue
-		}
-		if len(types) > 2 {
-			for _, cap := range types[2:] {
-				capabilities[cap] = true
-			}
-		}
+	w := git.WantList{}
+	h := git.HaveList{}
 
-		h := plumbing.NewHash(types[1])
+	git.ParseWantList(w, ch)
+	git.ParseHaveList(h, ch)
 
-		switch types[0] {
-		case "want":
-			log.Trace().Str("hash", h.String()).Msg("Got Want")
-			wants = append(wants, h)
-		case "have":
-			log.Trace().Str("hash", h.String()).Msg("Got Have")
-			haves[h] = true
-		default:
-			log.Trace().Str("hash", h.String()).Str("type", types[0]).Msg("Defaulting")
-			continue
-		}
-		if ok := e.Scan(); !ok {
-			log.Error().Err(e.Err()).Msg("done")
-		}
+	haves = h
+	for k := range w {
+		wants = append(wants, k)
 	}
+
+	return wants, haves, map[string]bool{}
+
+	// flush_count := 0
+	// for {
+	// 	b := e.Bytes()
+	// 	log.Trace().Bytes("content", b).Msg("Received pktline")
+	// 	if bytes.Equal(b, pktline.Flush) || bytes.Equal(b, []byte("done\n")) {
+	// 		flush_count++
+	// 		log.Trace().Msg("Received pktline.Flush")
+	// 		if flush_count == 2 {
+	// 			return wants, haves, capabilities
+	// 		}
+	// 		e = pktline.NewScanner(ch)
+	// 		e.Scan()
+	// 	}
+	// 	c := string(b)
+	// 	c = strings.TrimSpace(c)
+	// 	types := strings.Split(c, " ")
+	// 	if len(types) < 2 {
+	// 		continue
+	// 	}
+	// 	if len(types) > 2 {
+	// 		for _, cap := range types[2:] {
+	// 			capabilities[cap] = true
+	// 		}
+	// 	}
+	//
+	// 	h := plumbing.NewHash(types[1])
+	//
+	// 	switch types[0] {
+	// 	case "want":
+	// 		log.Trace().Str("hash", h.String()).Msg("Got Want")
+	// 		wants = append(wants, h)
+	// 	case "have":
+	// 		log.Trace().Str("hash", h.String()).Msg("Got Have")
+	// 		haves[h] = true
+	// 	default:
+	// 		log.Trace().Str("hash", h.String()).Str("type", types[0]).Msg("Defaulting")
+	// 		continue
+	// 	}
+	// 	if ok := e.Scan(); !ok {
+	// 		log.Error().Err(e.Err()).Msg("done")
+	// 	}
+	// }
 }
 
 func getNewObjects(
