@@ -40,7 +40,6 @@ func main() {
 		}
 		p := res.(*conventionalcommits.ConventionalCommit)
 		log.Println(p.Type)
-
 	}
 }
 
