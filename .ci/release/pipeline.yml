@@ -1,0 +1,12 @@
+---
+resources:
+  - name: grm
+    type: git
+    icon: github
+    source:
+      uri: git@github.com:Jameslikestea/grm.git
+      private_key: ((grm_secrets.ssh_key))
+      # Only release from master
+      branch: master
+      fetch_tags: true
+

@@ -18,5 +18,7 @@ require (
 
 require (
 	gg-scm.io/pkg/git v0.9.0
+	github.com/coreos/go-semver v0.3.0
+	github.com/leodido/go-conventionalcommits v0.9.0
 	golang.org/x/sys v0.0.0-20211210111614-af8b64212486 // indirect
 )
