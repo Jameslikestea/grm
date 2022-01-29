@@ -1,0 +1,34 @@
+name: "grmpkg"
+arch: "amd64"
+platform: "linux"
+version: "v1.0.0"
+section: "default"
+priority: "extra"
+maintainer: "James Crocker <jameslikestea@gmail.com>"
+description: |
+  GRMPKG is a package manager for git, it serves immutable tags to help you ensure that
+  your software is built to a higher standard
+vendor: "Jameslikestea"
+homepage: "https://grmpkg.com"
+license: "AGPLv3"
+depends:
+  - openssh-client
+contents:
+  - src: ./build/grmpkg
+    dst: /usr/local/bin/grmpkg
+    file_info:
+      mode: 0755
+      owner: grmpkg
+      group: grmpkg
+  - src: ./examples/grmpkg.yml
+    dst: /etc/grmpkg.yml
+    type: config
+    file_info:
+      mode: 0600
+      owner: grmpkg
+      group: grmpkg
+
+scripts:
+  preinstall: ./scripts/preinstall.sh
+  postinstall: ./scripts/postinstall.sh
+  postremove: ./scripts/postremove.sh
