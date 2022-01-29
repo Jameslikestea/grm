@@ -5,8 +5,78 @@ resources:
     icon: github
     source:
       uri: git@github.com:Jameslikestea/grm.git
-      private_key: ((grm_secrets.ssh_key))
+      private_key: ((grm_secrets.ssh_release))
       # Only release from master
       branch: master
       fetch_tags: true
 
+  - name: golang1.16
+    type: registry-image
+    icon: docker
+    source:
+      repository: golang
+      tag: 1.16
+
+  - name: go-releaser
+    type: registry-image
+    icon: docker
+    source:
+      repository: ghcr.io/caarlos0/svu
+      tag: latest
+
+  - name: github-release
+    type: github-release
+    source:
+      owner: Jameslikestea
+      repository: grm
+      access_token: ((grm_secrets.github_release))
+
+jobs:
+  - name: run_release
+    plan:
+      - get: grm
+      - get: golang1.16
+      - get: go-releaser
+      - task: build
+        image: golang1.16
+        config:
+          platform: linux
+          inputs:
+            - name: grm
+          outputs:
+            - name: build
+          run:
+            dir: grm
+            path: go
+            args:
+              - build
+              - -o
+              - ../build/grmpkg
+              - ./cmd/ssh
+      - task: version
+        image: go-releaser
+        config:
+          platform: linux
+          inputs:
+            - name: grm
+          outputs:
+            - name: version
+          run:
+            dir: grm
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                ls
+                svu next > ../version/version
+                git tag $(svu next)
+      - put: grm
+        params:
+          repository: grm
+          only_tag: true
+      - put: github-release
+        params:
+          name: version/version
+          tag: version/version
+          globs:
+            - build/grmpkg

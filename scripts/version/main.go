@@ -29,12 +29,13 @@ func main() {
 	for _, tag := range t {
 		markSeen(r, tag.hash, seen)
 	}
-	log.Println(seen)
+
 	getNewCommits(r, h, seen, &messages)
 
 	m := parser.NewMachine(parser.WithTypes(conventionalcommits.TypesConventional))
+
 	for _, msg := range messages {
-		res, err := m.Parse([]byte(msg))
+		res, err := m.Parse([]byte(strings.TrimSpace(msg)))
 		if err != nil {
 			continue
 		}
