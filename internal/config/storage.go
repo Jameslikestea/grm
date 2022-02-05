@@ -17,6 +17,8 @@ const (
 	storageCQLKeyspace = "storage.cql.keyspace"
 
 	storageSQLiteFile = "storage.sqlite.url"
+	storageMySQL      = "storage.mysql.url"
+	storagePostgresql = "storage.postgresql.connect_string"
 )
 
 func GetStorageType() string {
@@ -61,4 +63,12 @@ func GetStorageCQLKeyspace() string {
 
 func GetStorageSQLiteURL() string {
 	return viper.GetString(storageSQLiteFile)
+}
+
+func GetMySQLURL() string {
+	return viper.GetString(storageMySQL)
+}
+
+func GetPostgresURL() string {
+	return viper.GetString(storagePostgresql)
 }

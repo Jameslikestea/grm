@@ -1,11 +1,11 @@
-package sqlite
+package postgres
 
 import "C"
 import (
 	"context"
 
 	"github.com/go-git/go-git/v5/plumbing"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 
 	"github.com/Jameslikestea/grm/internal/config"
@@ -20,7 +20,7 @@ type SQLLiteStorage struct {
 }
 
 func NewSQLLiteStorage() *SQLLiteStorage {
-	client, err := ent.Open("sqlite3", config.GetStorageSQLiteURL())
+	client, err := ent.Open("postgres", config.GetPostgresURL())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Cannot instantiate sqlite3")
 	}

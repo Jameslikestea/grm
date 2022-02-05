@@ -20,7 +20,9 @@ require (
 	entgo.io/ent v0.10.0
 	gg-scm.io/pkg/git v0.9.0
 	github.com/coreos/go-semver v0.3.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/leodido/go-conventionalcommits v0.9.0
+	github.com/lib/pq v1.10.4
 	github.com/mattn/go-sqlite3 v1.14.10
 	golang.org/x/sys v0.0.0-20211210111614-af8b64212486 // indirect
 )
