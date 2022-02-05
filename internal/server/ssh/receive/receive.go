@@ -17,7 +17,11 @@ import (
 
 func SSHReceivePack(ch ssh.Channel, repo string, stor storage.Storage) {
 	advertiseRefs(ch, stor, repo)
-	refs := decodeRefs(ch)
+	refs, err := git.DecodeRefs(ch)
+	if err != nil {
+		ch.Stderr().Write([]byte("Cannot decode references\n"))
+		return
+	}
 	objs := decodePack(ch, stor, repo)
 
 	mapper := map[plumbing.Hash]storage.Object{}
