@@ -2,12 +2,9 @@ package receive
 
 import (
 	"bytes"
-	"strings"
-	"unicode"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/packfile"
-	"github.com/go-git/go-git/v5/plumbing/format/pktline"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 
@@ -39,44 +36,6 @@ func advertiseRefs(ch ssh.Channel, stor storage.Storage, repo string) {
 		log.Error().Err(err).Msg("Cannot list references for advertise pack")
 	}
 	git.GenerateReferencePack(refs, false, "git-receive-pack", ch)
-}
-
-func decodeRefs(ch ssh.Channel) []storage.Reference {
-	rfs := []storage.Reference{}
-	e := pktline.NewScanner(ch)
-	e.Scan()
-	for {
-		b := e.Bytes()
-		if bytes.Equal(b, pktline.Flush) {
-			log.Info().Msg("Received end packet")
-			return rfs
-		}
-
-		src := plumbing.NewHash(string(b[0:40]))
-		dst := plumbing.NewHash(string(b[41:81]))
-		ref := plumbing.ReferenceName(
-			strings.Map(
-				func(r rune) rune {
-					if unicode.IsControl(r) {
-						return -1
-					}
-					return r
-				}, string(b[82:]),
-			),
-		)
-
-		rfs = append(rfs, storage.Reference{Name: ref, Hash: dst})
-
-		log.Debug().Str("src", src.String()).Str("dst", dst.String()).Str(
-			"ref",
-			ref.Short(),
-		).Bool("tag", ref.IsTag()).Msg("Received reference update request")
-
-		if ok := e.Scan(); !ok {
-			log.Error().Err(e.Err()).Msg("done")
-		}
-	}
-	return rfs
 }
 
 func decodePack(ch ssh.Channel, stor storage.Storage, repo string) []storage.Object {

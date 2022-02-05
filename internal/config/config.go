@@ -42,6 +42,8 @@ func SetDefaults() {
 	viper.SetDefault(storageCQLUsername, "")
 	viper.SetDefault(storageCQLPassword, "")
 	viper.SetDefault(storageCQLKeyspace, "grmpkg")
+
+	viper.SetDefault(storageSQLiteFile, "file:ent?mode=memory&_fk=1")
 }
 
 func GetConfig() {
