@@ -19,7 +19,7 @@ func GenerateReferencePack(refs []storage.Reference, http bool, service string, 
 			"%s %s\x00%s\n",
 			plumbing.ZeroHash.String(),
 			"capabilities^{}",
-			"ofs-delta thin-pack multi_ack",
+			"ofs-delta multi_ack report-status",
 		)
 	}
 	for i, ref := range refs {

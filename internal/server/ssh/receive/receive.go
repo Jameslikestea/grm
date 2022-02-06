@@ -2,12 +2,10 @@ package receive
 
 import (
 	"bytes"
-	"strings"
-	"unicode"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/packfile"
-	"github.com/go-git/go-git/v5/plumbing/format/pktline"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 
@@ -16,17 +14,130 @@ import (
 )
 
 func SSHReceivePack(ch ssh.Channel, repo string, stor storage.Storage) {
+	// Stage 1 is to receive information from the client.
 	advertiseRefs(ch, stor, repo)
-	refs := decodeRefs(ch)
+	refs, err := git.DecodeRefs(ch)
+	if err != nil {
+		ch.Stderr().Write([]byte("Cannot decode references\n"))
+		return
+	}
 	objs := decodePack(ch, stor, repo)
 
-	mapper := map[plumbing.Hash]storage.Object{}
-	for _, obj := range objs {
-		mapper[obj.Hash] = obj
+	report := git.Report{}
+	validRefs := []storage.Reference{}
+	for _, ref := range refs {
+		if ref.Name.IsTag() {
+			validRefs = append(validRefs, ref)
+		}
+		report[ref.Name] = git.ReportItem{
+			Ok:     ref.Name.IsTag(),
+			Reason: "GRM only accepts tags",
+		}
 	}
 
-	stor.StoreObjects(repo, objs)
-	stor.StoreReferences(repo, refs)
+	validateTags(report, repo, stor)
+
+	if len(validRefs) > 0 {
+
+		mapper := map[plumbing.Hash]storage.Object{}
+		for _, obj := range objs {
+			mapper[obj.Hash] = obj
+		}
+
+		stor.StoreObjects(repo, objs)
+		stor.StoreReferences(repo, validRefs)
+	}
+
+	report.Write(ch)
+}
+
+// validateObjects validates that the objects are required for the repository to function
+func validateObjects(
+	validRefs []storage.Reference,
+	repoObjects []storage.Object,
+	repo string,
+	stor storage.Storage,
+) []storage.Object {
+	currentObjs, err := stor.ListObjects(repo)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to validate objects")
+		return repoObjects
+	}
+
+	seen := map[plumbing.Hash]bool{}
+	nObjs := map[plumbing.Hash]storage.Object{}
+	cache := map[plumbing.Hash]storage.Object{}
+
+	for _, obj := range currentObjs {
+		seen[obj.Hash] = true
+	}
+
+	for _, obj := range repoObjects {
+		cache[obj.Hash] = obj
+	}
+
+	for _, ref := range validRefs {
+		hunt(ref.Hash, cache, nObjs, seen)
+	}
+
+	newObjects := []storage.Object{}
+	for _, obj := range nObjs {
+		if _, ok := seen[obj.Hash]; !ok {
+			newObjects = append(newObjects, obj)
+		}
+	}
+
+	return newObjects
+}
+
+func hunt(hash plumbing.Hash, cache, nObjs map[plumbing.Hash]storage.Object, seen map[plumbing.Hash]bool) {
+	if _, ok := seen[hash]; ok {
+		return
+	}
+	obj, ok := cache[hash]
+	if !ok {
+		log.Warn().Msg("Cannot find object in cache")
+		return
+	}
+
+	nObjs[hash] = obj
+	seen[hash] = true
+
+	m := &plumbing.MemoryObject{}
+	m.SetType(obj.Type)
+	m.SetSize(int64(len(obj.Content)))
+	m.Write(obj.Content)
+
+	switch obj.Type {
+	case plumbing.CommitObject:
+		c := object.Commit{}
+		c.Decode(m)
+		for _, h := range c.ParentHashes {
+			hunt(h, cache, nObjs, seen)
+		}
+	case plumbing.TreeObject:
+		t := object.Tree{}
+		t.Decode(m)
+		for _, h := range t.Entries {
+			hunt(h.Hash, cache, nObjs, seen)
+		}
+	}
+}
+
+func validateTags(r git.Report, repo string, stor storage.Storage) {
+	ref, err := stor.ListReferences(repo)
+	if err != nil {
+		log.Warn().Err(err).Msg("Cannot validate tags")
+		return
+	}
+
+	for _, rf := range ref {
+		if reference, ok := r[rf.Name]; ok {
+			reference.Ok = false
+			reference.Reason = "GRM tags are immutable"
+			r[rf.Name] = reference
+		}
+	}
 }
 
 func advertiseRefs(ch ssh.Channel, stor storage.Storage, repo string) {
@@ -35,44 +146,6 @@ func advertiseRefs(ch ssh.Channel, stor storage.Storage, repo string) {
 		log.Error().Err(err).Msg("Cannot list references for advertise pack")
 	}
 	git.GenerateReferencePack(refs, false, "git-receive-pack", ch)
-}
-
-func decodeRefs(ch ssh.Channel) []storage.Reference {
-	rfs := []storage.Reference{}
-	e := pktline.NewScanner(ch)
-	e.Scan()
-	for {
-		b := e.Bytes()
-		if bytes.Equal(b, pktline.Flush) {
-			log.Info().Msg("Received end packet")
-			return rfs
-		}
-
-		src := plumbing.NewHash(string(b[0:40]))
-		dst := plumbing.NewHash(string(b[41:81]))
-		ref := plumbing.ReferenceName(
-			strings.Map(
-				func(r rune) rune {
-					if unicode.IsControl(r) {
-						return -1
-					}
-					return r
-				}, string(b[82:]),
-			),
-		)
-
-		rfs = append(rfs, storage.Reference{Name: ref, Hash: dst})
-
-		log.Debug().Str("src", src.String()).Str("dst", dst.String()).Str(
-			"ref",
-			ref.Short(),
-		).Bool("tag", ref.IsTag()).Msg("Received reference update request")
-
-		if ok := e.Scan(); !ok {
-			log.Error().Err(e.Err()).Msg("done")
-		}
-	}
-	return rfs
 }
 
 func decodePack(ch ssh.Channel, stor storage.Storage, repo string) []storage.Object {

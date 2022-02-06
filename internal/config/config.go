@@ -42,6 +42,10 @@ func SetDefaults() {
 	viper.SetDefault(storageCQLUsername, "")
 	viper.SetDefault(storageCQLPassword, "")
 	viper.SetDefault(storageCQLKeyspace, "grmpkg")
+
+	viper.SetDefault(storageSQLiteFile, "file:ent?mode=memory&_fk=1")
+	viper.SetDefault(storageMySQL, "<user>:<pass>@tcp(<host>:<port>)/<database>?parseTime=True")
+	viper.SetDefault(storagePostgresql, "host=<host> port=<port> user=<user> dbname=<database> password=<pass>")
 }
 
 func GetConfig() {

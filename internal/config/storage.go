@@ -15,6 +15,10 @@ const (
 	storageCQLUsername = "storage.cql.username"
 	storageCQLPassword = "storage.cql.password"
 	storageCQLKeyspace = "storage.cql.keyspace"
+
+	storageSQLiteFile = "storage.sqlite.url"
+	storageMySQL      = "storage.mysql.url"
+	storagePostgresql = "storage.postgresql.connect_string"
 )
 
 func GetStorageType() string {
@@ -55,4 +59,16 @@ func GetStorageCQLPassword() string {
 
 func GetStorageCQLKeyspace() string {
 	return viper.GetString(storageCQLKeyspace)
+}
+
+func GetStorageSQLiteURL() string {
+	return viper.GetString(storageSQLiteFile)
+}
+
+func GetMySQLURL() string {
+	return viper.GetString(storageMySQL)
+}
+
+func GetPostgresURL() string {
+	return viper.GetString(storagePostgresql)
 }

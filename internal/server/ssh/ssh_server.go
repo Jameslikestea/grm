@@ -15,6 +15,9 @@ import (
 	"github.com/Jameslikestea/grm/internal/storage"
 	"github.com/Jameslikestea/grm/internal/storage/cql"
 	"github.com/Jameslikestea/grm/internal/storage/memory"
+	"github.com/Jameslikestea/grm/internal/storage/mysql"
+	"github.com/Jameslikestea/grm/internal/storage/postgres"
+	"github.com/Jameslikestea/grm/internal/storage/sqlite"
 )
 
 type Server struct {
@@ -75,6 +78,12 @@ be prosecuted to the full extent of the law.
 	switch strings.ToUpper(config.GetStorageType()) {
 	case "MEMORY":
 		stor = memory.NewMemoryStorage()
+	case "SQLITE":
+		stor = sqlite.NewSQLLiteStorage()
+	case "MYSQL":
+		stor = mysql.NewSQLLiteStorage()
+	case "POSTGRES":
+		stor = postgres.NewSQLLiteStorage()
 	// case "S3":
 	// 	stor = s3.NewS3Storage()
 	case "CQL":

@@ -27,7 +27,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    false,
 				service: "git-receive-pack",
 			},
-			wantWriter: "005b0000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta thin-pack multi_ack\n0000",
+			wantWriter: "005f0000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta multi_ack report-status\n0000",
 		},
 		{
 			name: "HTTP No References Receive Pack",
@@ -36,7 +36,7 @@ func TestGenerateReferencePack(t *testing.T) {
 				http:    true,
 				service: "git-receive-pack",
 			},
-			wantWriter: "001f# service=git-receive-pack\n005b0000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta thin-pack multi_ack\n0000",
+			wantWriter: "001f# service=git-receive-pack\n005f0000000000000000000000000000000000000000 capabilities^{}\x00ofs-delta multi_ack report-status\n0000",
 		},
 		{
 			name: "SSH Single Reference",
