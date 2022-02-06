@@ -44,12 +44,19 @@ func (S SQLLiteStorage) StoreReferences(s string, references []storage.Reference
 }
 
 func (S SQLLiteStorage) StoreObjects(s string, objects []storage.Object) error {
-	ops := make([]*ent.ObjectCreate, len(objects))
-	for i, obj := range objects {
-		ops[i] = S.c.Object.Create().SetHash(obj.Hash.String()).SetType(int8(obj.Type)).SetContent(obj.Content).SetPackage(s)
+	// ops := make([]*ent.ObjectCreate, 100)
+	// i := 0
+	for _, obj := range objects {
+		go func(o storage.Object) {
+			_, err := S.c.Object.Create().SetHash(o.Hash.String()).SetType(int8(o.Type)).SetContent(o.Content).SetPackage(s).Save(context.Background())
+			if err != nil {
+				log.Warn().Err(err).Msg("Cannot creat object")
+			}
+
+		}(obj)
 	}
-	_, err := S.c.Object.CreateBulk(ops...).Save(context.Background())
-	return err
+	// _, err := S.c.Object.CreateBulk(ops[:i]...).Save(context.Background())
+	return nil
 }
 
 func (S SQLLiteStorage) ListReferences(s string) ([]storage.Reference, error) {
