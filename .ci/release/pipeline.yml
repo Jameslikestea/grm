@@ -68,8 +68,8 @@ jobs:
               - -c
               - |
                 ls
-                svu next > ../version/version
-                git tag $(svu next)
+                svu next --force-patch-increment > ../version/version
+                git tag $(svu next --force-patch-increment)
       - put: grm
         params:
           repository: grm

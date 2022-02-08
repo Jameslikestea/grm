@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html"
@@ -11,14 +12,41 @@ import (
 	"github.com/Jameslikestea/grm/internal/config"
 	"github.com/Jameslikestea/grm/internal/server/http/handlers"
 	"github.com/Jameslikestea/grm/internal/server/http/middleware"
+	"github.com/Jameslikestea/grm/internal/storage"
+	"github.com/Jameslikestea/grm/internal/storage/cql"
+	"github.com/Jameslikestea/grm/internal/storage/memory"
+	"github.com/Jameslikestea/grm/internal/storage/mysql"
+	"github.com/Jameslikestea/grm/internal/storage/postgres"
+	"github.com/Jameslikestea/grm/internal/storage/sqlite"
 )
 
 type Server struct {
-	s *fiber.App
+	s    *fiber.App
+	stor storage.Storage
 }
 
 func NewServer() *Server {
 	engine := html.New("./templates", ".html")
+
+	var stor storage.Storage
+
+	switch strings.ToUpper(config.GetStorageType()) {
+	case "MEMORY":
+		stor = memory.NewMemoryStorage()
+	case "SQLITE":
+		stor = sqlite.NewSQLLiteStorage()
+	case "MYSQL":
+		stor = mysql.NewSQLLiteStorage()
+	case "POSTGRES":
+		stor = postgres.NewSQLLiteStorage()
+	// case "S3":
+	// 	stor = s3.NewS3Storage()
+	case "CQL":
+		stor = cql.NewCQLStorage()
+	default:
+		log.Warn().Msg("No Acceptable Storage Engine Chosen, Defaulting to In Memory")
+		stor = memory.NewMemoryStorage()
+	}
 
 	s := &Server{
 		s: fiber.New(
@@ -28,6 +56,7 @@ func NewServer() *Server {
 				DisableStartupMessage: true,
 			},
 		),
+		stor: stor,
 	}
 
 	s.constructMiddleware()
@@ -40,6 +69,9 @@ func NewServer() *Server {
 func (s *Server) constructRoutes() {
 	s.s.Get("/", handlers.Index)
 	s.s.Get("/package", handlers.Package)
+	s.s.Get("/*.git", handlers.Git)
+	s.s.Get("/*.git/info/refs", handlers.AdvertiseReference(s.stor))
+	s.s.Post("/*.git/git-upload-pack", handlers.UploadPack(s.stor))
 	s.s.Get("/*", handlers.Repository)
 }
 
