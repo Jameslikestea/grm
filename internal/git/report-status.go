@@ -2,6 +2,7 @@ package git
 
 import (
 	"io"
+	"sort"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/pktline"
@@ -17,11 +18,19 @@ type Report map[plumbing.ReferenceName]ReportItem
 func (r Report) Write(w io.Writer) {
 	e := pktline.NewEncoder(w)
 	e.Encodef("unpack ok\n")
-	for ref, item := range r {
+	keys := make([]string, len(r))
+	i := 0
+	for key, _ := range r {
+		keys[i] = key.String()
+		i++
+	}
+	sort.Strings(keys)
+	for _, ref := range keys {
+		item := r[plumbing.ReferenceName(ref)]
 		if item.Ok {
-			e.Encodef("ok %s\n", ref.String())
+			e.Encodef("ok %s\n", ref)
 		} else {
-			e.Encodef("ng %s %s\n", ref.String(), item.Reason)
+			e.Encodef("ng %s %s\n", ref, item.Reason)
 		}
 	}
 	e.Flush()
