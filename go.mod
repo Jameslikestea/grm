@@ -24,5 +24,6 @@ require (
 	github.com/leodido/go-conventionalcommits v0.9.0
 	github.com/lib/pq v1.10.4
 	github.com/mattn/go-sqlite3 v1.14.10
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20211210111614-af8b64212486 // indirect
 )
