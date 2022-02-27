@@ -46,6 +46,11 @@ func SetDefaults() {
 	viper.SetDefault(storageSQLiteFile, "file:ent?mode=memory&_fk=1")
 	viper.SetDefault(storageMySQL, "<user>:<pass>@tcp(<host>:<port>)/<database>?parseTime=True")
 	viper.SetDefault(storagePostgresql, "host=<host> port=<port> user=<user> dbname=<database> password=<pass>")
+
+	viper.SetDefault(authenticationProvider, "github")
+	viper.SetDefault(authenticationGithubClientID, "")
+	viper.SetDefault(authenticationGithubClientSecret, "")
+	viper.SetDefault(authenticationGithubRedirectURL, "http://localhost:8080")
 }
 
 func GetConfig() {

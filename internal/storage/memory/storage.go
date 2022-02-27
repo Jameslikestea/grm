@@ -4,9 +4,12 @@ import (
 	"errors"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/gocql/gocql"
 
 	"github.com/Jameslikestea/grm/internal/storage"
 )
+
+var _ storage.Storage = MemoryStorage{}
 
 type MemoryStorage struct {
 	refs    map[string]plumbing.Hash
@@ -18,6 +21,22 @@ func NewMemoryStorage() *MemoryStorage {
 		refs:    make(map[string]plumbing.Hash),
 		objects: make(map[plumbing.Hash]storage.Object),
 	}
+}
+
+func (m MemoryStorage) GenerateHashKey() error {
+	// In memory should be for testing only, so we're just going to hard code
+	// a hash key
+	return nil
+}
+
+func (m MemoryStorage) GetHashKey() ([]storage.HashKey, error) {
+	return []storage.HashKey{
+		storage.HashKey{
+			// Always return a 0 KID
+			KID: gocql.UUID{},
+			K:   "hash-key",
+		},
+	}, nil
 }
 
 func (m MemoryStorage) StoreReferences(repo string, references []storage.Reference) error {
@@ -32,8 +51,13 @@ func (m MemoryStorage) StoreReferences(repo string, references []storage.Referen
 
 func (m MemoryStorage) StoreObjects(repo string, objects []storage.Object) error {
 	for _, obj := range objects {
-		m.objects[obj.Hash] = obj
+		m.StoreObject(repo, obj, 0)
 	}
+	return nil
+}
+
+func (m MemoryStorage) StoreObject(repo string, object storage.Object, ttl int) error {
+	m.objects[object.Hash] = object
 	return nil
 }
 
