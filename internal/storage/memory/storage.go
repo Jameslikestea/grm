@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/gocql/gocql"
 
 	"github.com/Jameslikestea/grm/internal/storage"
 )
@@ -23,13 +24,19 @@ func NewMemoryStorage() *MemoryStorage {
 }
 
 func (m MemoryStorage) GenerateHashKey() error {
-	// TODO implement me
-	panic("implement me")
+	// In memory should be for testing only, so we're just going to hard code
+	// a hash key
+	return nil
 }
 
 func (m MemoryStorage) GetHashKey() ([]storage.HashKey, error) {
-	// TODO implement me
-	panic("implement me")
+	return []storage.HashKey{
+		storage.HashKey{
+			// Always return a 0 KID
+			KID: gocql.UUID{},
+			K:   "hash-key",
+		},
+	}, nil
 }
 
 func (m MemoryStorage) StoreReferences(repo string, references []storage.Reference) error {
