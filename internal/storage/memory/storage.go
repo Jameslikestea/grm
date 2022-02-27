@@ -8,6 +8,8 @@ import (
 	"github.com/Jameslikestea/grm/internal/storage"
 )
 
+var _ storage.Storage = MemoryStorage{}
+
 type MemoryStorage struct {
 	refs    map[string]plumbing.Hash
 	objects map[plumbing.Hash]storage.Object
@@ -18,6 +20,16 @@ func NewMemoryStorage() *MemoryStorage {
 		refs:    make(map[string]plumbing.Hash),
 		objects: make(map[plumbing.Hash]storage.Object),
 	}
+}
+
+func (m MemoryStorage) GenerateHashKey() error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (m MemoryStorage) GetHashKey() ([]storage.HashKey, error) {
+	// TODO implement me
+	panic("implement me")
 }
 
 func (m MemoryStorage) StoreReferences(repo string, references []storage.Reference) error {

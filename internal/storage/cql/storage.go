@@ -1,6 +1,9 @@
 package cql
 
 import (
+	"crypto/rand"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -14,10 +17,13 @@ import (
 	"github.com/Jameslikestea/grm/internal/storage"
 )
 
+var _ storage.Storage = &CQLStorage{}
+
 type CQLStorage struct {
 	conn *gocqlx.Session
 	obj  *table.Table
 	ref  *table.Table
+	key  *table.Table
 }
 
 func NewCQLStorage() *CQLStorage {
@@ -53,6 +59,19 @@ func NewCQLStorage() *CQLStorage {
 		log.Fatal().Err(err).Msg("Cannot create table")
 	}
 
+	err = sess.ExecStmt(
+		"CREATE TABLE IF NOT EXISTS user_sessions (" +
+			"user TEXT," +
+			"token uuid," +
+			"key uuid," +
+			"type varchar," +
+			"signature varchar," +
+			"PRIMARY KEY (user));",
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Cannot create table")
+	}
+
 	return &CQLStorage{
 		conn: &sess,
 		obj: table.New(
@@ -69,7 +88,47 @@ func NewCQLStorage() *CQLStorage {
 				PartKey: []string{"package", "ref"},
 			},
 		),
+		key: table.New(
+			table.Metadata{
+				Name:    "hash_key",
+				Columns: []string{"kid", "k"},
+				PartKey: []string{"kid"},
+			},
+		),
 	}
+}
+
+func (C CQLStorage) GenerateHashKey() error {
+	_, err := C.GetHashKey()
+	if err == nil {
+		return nil
+	}
+
+	r := rand.Reader
+	buf := make([]byte, 256)
+	r.Read(buf)
+
+	log.Info().Bytes("key", buf).Msg("Generated Hash Key")
+	err = C.conn.ExecStmt("CREATE TABLE IF NOT EXISTS hash_key(kid uuid primary key, k varchar);")
+	if err != nil {
+		log.Error().Err(err).Msg("Cannot create key table")
+	}
+
+	C.conn.Query(C.key.InsertBuilder().Unique().ToCql()).Bind(gocql.TimeUUID(), fmt.Sprintf("%X", buf)).Exec()
+
+	return nil
+}
+
+func (C CQLStorage) GetHashKey() ([]storage.HashKey, error) {
+	var keys []storage.HashKey
+	err := C.conn.Query(C.key.SelectAll()).Select(&keys)
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, errors.New("no keys")
+	}
+	return keys, nil
 }
 
 func (C CQLStorage) StoreReferences(s string, references []storage.Reference) error {
