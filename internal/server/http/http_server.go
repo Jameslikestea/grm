@@ -89,6 +89,7 @@ func (s *Server) constructRoutes() {
 
 	s.s.Get("/authn/start", handlers.HandleStartAuthenticator(s.authn))
 	s.s.Get("/authn/github", handlers.HandleGithubAuthentication(s.authn, s.stor))
+	s.s.Get("/authn/me", handlers.HandleMe)
 
 	s.s.Get("/*", handlers.Repository)
 
@@ -99,6 +100,7 @@ func (s *Server) constructMiddleware() {
 	s.s.Use(
 		middleware.Cors,
 		middleware.JsonHeaders,
+		middleware.Authn(s.authn),
 	)
 }
 

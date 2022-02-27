@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"crypto/sha512"
-	"encoding/hex"
+	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/gocql/gocql"
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/Jameslikestea/grm/internal/authn"
+	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 	"github.com/Jameslikestea/grm/internal/storage"
 )
 
@@ -38,35 +38,35 @@ func HandleGithubAuthentication(a authn.Authenticator, stor storage.Storage) fib
 			return nil
 		}
 
-		user, err := a.Username(token)
+		sess, err := a.Register(token)
 		if err != nil {
 			ctx.Status(http.StatusUnauthorized)
 			ctx.Write([]byte(http.StatusText(http.StatusUnauthorized)))
 			return nil
 		}
 
-		keys, err := stor.GetHashKey()
-		if err != nil {
-			ctx.Status(http.StatusInternalServerError)
-			ctx.Write([]byte(http.StatusText(http.StatusInternalServerError)))
-			return nil
-		}
-
-		as := storage.AuthenticationSession{
-			User:      user,
-			TID:       gocql.TimeUUID(),
-			KID:       keys[0].KID,
-			Type:      "USER",
-			Signature: "",
-		}
-
-		hasher := sha512.New()
-		hasher.Write([]byte(keys[0].K))
-		as.Signature = hex.EncodeToString(hasher.Sum([]byte(as.UnhashedString())))
-
 		ctx.Status(http.StatusOK)
-		ctx.Write([]byte(as.String()))
-
+		ctx.Cookie(
+			&fiber.Cookie{
+				Name:    "grm.authentication",
+				Value:   sess,
+				Expires: time.Now().UTC().Add(time.Hour),
+			},
+		)
 		return nil
 	}
+}
+
+func HandleMe(ctx *fiber.Ctx) error {
+
+	ctx.Write(
+		[]byte(fmt.Sprintf(
+			"%v-%s-%s",
+			ctx.Locals(middleware.AUTHENTICATED),
+			ctx.Locals(middleware.USER_ID),
+			ctx.Locals(middleware.SESSION_ID),
+		)),
+	)
+
+	return nil
 }

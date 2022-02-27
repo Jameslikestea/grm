@@ -44,6 +44,7 @@ func (a AuthenticationSession) UnhashedString() string {
 type Storage interface {
 	StoreReferences(string, []Reference) error
 	StoreObjects(string, []Object) error
+	StoreObject(string, Object, int) error
 	ListReferences(string) ([]Reference, error)
 	ListObjects(string) ([]Object, error)
 	GetObject(string, plumbing.Hash) (Object, error)

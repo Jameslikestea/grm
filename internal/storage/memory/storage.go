@@ -51,8 +51,13 @@ func (m MemoryStorage) StoreReferences(repo string, references []storage.Referen
 
 func (m MemoryStorage) StoreObjects(repo string, objects []storage.Object) error {
 	for _, obj := range objects {
-		m.objects[obj.Hash] = obj
+		m.StoreObject(repo, obj, 0)
 	}
+	return nil
+}
+
+func (m MemoryStorage) StoreObject(repo string, object storage.Object, ttl int) error {
+	m.objects[object.Hash] = object
 	return nil
 }
 

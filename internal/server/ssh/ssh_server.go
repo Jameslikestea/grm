@@ -44,7 +44,7 @@ func NewServer() *Server {
 			if conn.User() != config.GetSSHUsername() {
 				return nil, ssh.ServerAuthError{
 					Errors: []error{
-						fmt.Errorf("Username Not Supported. Please use: %s", config.GetSSHUsername()),
+						fmt.Errorf("UID Not Supported. Please use: %s", config.GetSSHUsername()),
 					},
 				}
 			}
