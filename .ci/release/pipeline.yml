@@ -24,6 +24,13 @@ resources:
       repository: ghcr.io/caarlos0/svu
       tag: latest
 
+  - name: git-chglog
+    type: registry-image
+    icon: docker
+    source:
+      repository: quay.io/git-chglog/git-chglog
+      tag: latest
+
   - name: github-release
     type: github-release
     source:
@@ -70,6 +77,23 @@ jobs:
                 ls
                 svu next --force-patch-increment > ../version/version
                 git tag $(svu next --force-patch-increment)
+      - task: changelog
+        image: git-chglog
+        config:
+          platform: linux
+          inputs:
+            - name: grm
+            - name: version
+          outputs:
+            - name: changelog
+          run:
+            dir: grm
+            path: /bin/sh
+            args:
+              - -c
+              - mkdir ../changelog
+              - export VERSION=$(cat ../version/version)
+              - git-chglog ..$(cat ../version/version) > ../changelog/changelog
       - put: grm
         params:
           repository: grm
@@ -78,5 +102,6 @@ jobs:
         params:
           name: version/version
           tag: version/version
+          body: changelog/changelog
           globs:
             - build/grmpkg
