@@ -186,4 +186,5 @@ jobs:
             path: /opa
             args:
               - test
+              - -v
               - ./internal/policy/policies/
