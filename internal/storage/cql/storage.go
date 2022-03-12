@@ -144,7 +144,11 @@ func (C CQLStorage) StoreObjects(s string, objects []storage.Object) error {
 }
 
 func (C CQLStorage) StoreObject(s string, object storage.Object, ttl int) error {
-	err := C.conn.Query(C.obj.InsertBuilder().TTL(time.Second*time.Duration(ttl)).ToCql()).Bind(
+	bldr := C.obj.InsertBuilder()
+	if ttl > 0 {
+		bldr.TTL(time.Second * time.Duration(ttl))
+	}
+	err := C.conn.Query(bldr.ToCql()).Bind(
 		s,
 		object.Type,
 		object.Hash.String(),

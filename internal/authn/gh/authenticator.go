@@ -109,7 +109,7 @@ func (gh *GithubAuthenticator) CreateSession(userHash models.User) (string, erro
 			Type:    0,
 			Content: models.Marshal(session),
 		},
-		int(time.Hour),
+		60*60,
 	)
 
 	if err != nil {

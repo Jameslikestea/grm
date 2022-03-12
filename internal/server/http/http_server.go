@@ -12,6 +12,9 @@ import (
 	"github.com/Jameslikestea/grm/internal/authn"
 	"github.com/Jameslikestea/grm/internal/authn/gh"
 	"github.com/Jameslikestea/grm/internal/config"
+	"github.com/Jameslikestea/grm/internal/namespace"
+	servicens "github.com/Jameslikestea/grm/internal/namespace/service"
+	"github.com/Jameslikestea/grm/internal/policy"
 	"github.com/Jameslikestea/grm/internal/server/http/handlers"
 	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 	"github.com/Jameslikestea/grm/internal/storage"
@@ -23,6 +26,8 @@ type Server struct {
 	s     *fiber.App
 	stor  storage.Storage
 	authn authn.Authenticator
+	pol   policy.Manager
+	ns    namespace.Manager
 }
 
 func NewServer() *Server {
@@ -30,6 +35,7 @@ func NewServer() *Server {
 
 	var stor storage.Storage
 	var authn authn.Authenticator
+	pol := policy.New()
 
 	switch strings.ToUpper(config.GetStorageType()) {
 	case "MEMORY":
@@ -61,6 +67,8 @@ func NewServer() *Server {
 		authn = nil
 	}
 
+	ns := servicens.New(stor)
+
 	s := &Server{
 		s: fiber.New(
 			fiber.Config{
@@ -71,6 +79,8 @@ func NewServer() *Server {
 		),
 		stor:  stor,
 		authn: authn,
+		pol:   pol,
+		ns:    ns,
 	}
 
 	s.constructMiddleware()
@@ -90,6 +100,9 @@ func (s *Server) constructRoutes() {
 	s.s.Get("/authn/start", handlers.HandleStartAuthenticator(s.authn))
 	s.s.Get("/authn/github", handlers.HandleGithubAuthentication(s.authn, s.stor))
 	s.s.Get("/authn/me", handlers.HandleMe)
+
+	s.s.Post("/api/ns/:namespace", handlers.CreateNamespace(s.ns, s.pol))
+	// s.s.Post("/api/ns/:namespace/r/:repo")
 
 	s.s.Get("/*", handlers.Repository)
 
