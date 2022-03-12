@@ -183,7 +183,7 @@ jobs:
             - name: grm
           run:
             dir: grm
-            path: opa
+            path: /opa
             args:
               - test
               - ./internal/policy/policies/
