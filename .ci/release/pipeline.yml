@@ -44,6 +44,7 @@ jobs:
       - get: grm
       - get: golang1.16
       - get: go-releaser
+      - get: git-chglog
       - task: build
         image: golang1.16
         config:
@@ -91,9 +92,10 @@ jobs:
             path: /bin/sh
             args:
               - -c
-              - mkdir ../changelog
-              - export VERSION=$(cat ../version/version)
-              - git-chglog ..$(cat ../version/version) > ../changelog/changelog
+              - |
+                ls
+                export VERSION=$(cat ../version/version)
+                git-chglog ..$(cat ../version/version) > ../changelog/changelog
       - put: grm
         params:
           repository: grm
