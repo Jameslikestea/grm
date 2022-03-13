@@ -2,6 +2,8 @@ package policy
 
 import (
 	"testing"
+
+	"github.com/Jameslikestea/grm/internal/models"
 )
 
 func TestService_Evaluate(t *testing.T) {
@@ -19,7 +21,7 @@ func TestService_Evaluate(t *testing.T) {
 			args: args{
 				query: RepoValidName,
 				input: PolicyRequest{
-					Repo: Repo{
+					Repo: models.Repo{
 						Name: "repository",
 					},
 				},
@@ -31,7 +33,7 @@ func TestService_Evaluate(t *testing.T) {
 			args: args{
 				query: RepoValidName,
 				input: PolicyRequest{
-					Repo: Repo{
+					Repo: models.Repo{
 						Name: "_internal.myrepo",
 					},
 				},
