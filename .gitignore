@@ -4,6 +4,7 @@
 build/
 .idea
 !.github/**/*.yml
+!.chglog/config.yml
 !examples/**/*
 *.deb
 *.rpm
