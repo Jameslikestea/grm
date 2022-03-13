@@ -94,8 +94,8 @@ jobs:
               - -c
               - |
                 ls
-                export VERSION=$(cat ../version/version)
-                git-chglog ..$(cat ../version/version) > ../changelog/changelog
+                git-chglog --config ./.chglog/config.yml > ../changelog/changelog
+                cat ../changelog/changelog
       - put: grm
         params:
           repository: grm
