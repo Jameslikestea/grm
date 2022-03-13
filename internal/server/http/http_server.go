@@ -102,6 +102,7 @@ func (s *Server) constructRoutes() {
 	s.s.Get("/authn/me", handlers.HandleMe)
 
 	s.s.Post("/api/ns/:namespace", handlers.CreateNamespace(s.ns, s.pol))
+	s.s.Get("/api/ns/:namespace", handlers.GetNamespace(s.ns, s.pol))
 	// s.s.Post("/api/ns/:namespace/r/:repo")
 
 	s.s.Get("/*", handlers.Repository)

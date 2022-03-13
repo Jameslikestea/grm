@@ -1,5 +1,9 @@
 package models
 
+var _ Model = Namespace{}
+var _ Model = NamespacePermission{}
+var _ Model = CreateNamespaceRequest{}
+
 type Namespace struct {
 	Name   string `json:"name"`
 	Public bool   `json:"public"`

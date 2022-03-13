@@ -1,5 +1,9 @@
 package models
 
+var _ Model = Repo{}
+var _ Model = RepoPermission{}
+var _ Model = CreateRepoRequest{}
+
 type Repo struct {
 	Name      string    `json:"name"`
 	Namespace Namespace `json:"namespace"`

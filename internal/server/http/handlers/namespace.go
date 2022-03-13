@@ -39,16 +39,53 @@ func CreateNamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
 		}
 
 		name := n.CreateNamespace(cns)
-		n.CreateNamespacePermission(
-			models.NamespacePermission{
-				Namespace: name.Name,
-				UserID:    uid,
-				Admin:     true,
-				Write:     true,
-				Read:      true,
+		nsp := models.NamespacePermission{
+			Namespace: name.Name,
+			UserID:    uid,
+			Admin:     true,
+			Write:     true,
+			Read:      true,
+		}
+		n.CreateNamespaceUserPermission(nsp)
+		n.UpdateNamespacePermissions(nsp)
+		ctx.JSON(name)
+
+		return nil
+	}
+}
+
+func GetNamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		ns := ctx.Params("namespace")
+		uid := ctx.Locals(middleware.USER_ID).(string)
+
+		perms := n.GetNamespacePermissions(ns)
+		nspc, err := n.GetNamespace(ns)
+		if err != nil {
+			ctx.Status(http.StatusNotFound)
+			ctx.Write([]byte(http.StatusText(http.StatusNotFound)))
+		}
+
+		allow := p.Evaluate(
+			policy.NamespaceRead, policy.PolicyRequest{
+				UserID:               uid,
+				NamespacePermissions: perms,
+				Namespace:            nspc,
 			},
 		)
-		ctx.JSON(name)
+
+		log.Debug().Bool("allow", allow).Interface(
+			"input",
+			policy.PolicyRequest{UserID: uid, NamespacePermissions: perms, Namespace: nspc},
+		).Msg("Made a decision")
+
+		if !allow {
+			ctx.Status(http.StatusForbidden)
+			ctx.Write([]byte(http.StatusText(http.StatusForbidden)))
+			return nil
+		}
+
+		ctx.JSON(nspc)
 
 		return nil
 	}

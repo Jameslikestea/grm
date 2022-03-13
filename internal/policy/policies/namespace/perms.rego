@@ -35,5 +35,5 @@ admin = true {
 namespace_permissions[perm] {
     perm := input.namespace_permissions[_]
     perm.uid == input.uid
-    perm.namespace == input.repo.namespace.name
+    perm.namespace == input.namespace.name
 }
