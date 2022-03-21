@@ -7,7 +7,7 @@ import (
 )
 
 type Authenticator interface {
-	NewSession() string
+	NewSession(state string) string
 	Token(string) (string, error)
 	UID(string) (string, error)
 

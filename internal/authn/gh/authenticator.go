@@ -47,8 +47,8 @@ func New(
 	}
 }
 
-func (gh *GithubAuthenticator) NewSession() string {
-	return gh.conf.AuthCodeURL("no-state")
+func (gh *GithubAuthenticator) NewSession(state string) string {
+	return gh.conf.AuthCodeURL(state)
 }
 
 func (gh *GithubAuthenticator) UID(token string) (string, error) {
@@ -109,7 +109,7 @@ func (gh *GithubAuthenticator) CreateSession(userHash models.User) (string, erro
 			Type:    0,
 			Content: models.Marshal(session),
 		},
-		int(time.Hour),
+		60*60,
 	)
 
 	if err != nil {

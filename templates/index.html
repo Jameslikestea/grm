@@ -9,10 +9,15 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">GRM - Go Resource Manager</a>
-            <form class="d-flex" action="/package">
+            <form class="d-flex" action="/package" style="margin-left: auto; margin-right: 15px;">
                 <input name="q" class="form-control" type="search" placeholder="Package" aria-label="Package"/>
                 <button class="btn btn-outline-primary">Go</button>
             </form>
+            {{if .Anon}}
+            <form class="d-flex" action="/authn/start" method="GET">
+                <button class="btn btn-outline-success">Login</button>
+            </form>
+            {{end}}
         </div>
     </nav>
     <main class="flex-shrink-0">

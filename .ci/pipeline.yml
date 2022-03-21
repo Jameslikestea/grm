@@ -34,6 +34,11 @@ resources:
       repository: golang
       tag: 1.16
 
+  - name: opa
+    type: registry-image
+    source:
+      repository: openpolicyagent/opa
+      tag: 0.38.0
 jobs:
   - name: generate_checks
     plan:
@@ -55,6 +60,12 @@ jobs:
               params:
                 state: pending
                 context: 1.16-test
+            - put: grm-status
+              inputs:
+                - grm
+              params:
+                state: pending
+                context: policies
 
   - name: test_1.17
     on_failure:
@@ -136,3 +147,44 @@ jobs:
             args:
               - test
               - ./...
+  - name: test_policies
+    on_failure:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: failure
+        context: policies
+    on_success:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: success
+        context: policies
+    on_error:
+      put: grm-status
+      inputs:
+        - grm
+      params:
+        state: error
+        context: policies
+    plan:
+      - get: grm
+        trigger: true
+        passed:
+          - generate_checks
+      - get: opa
+      - task: test
+        image: opa
+        config:
+          platform: linux
+          inputs:
+            - name: grm
+          run:
+            dir: grm
+            path: /opa
+            args:
+              - test
+              - -v
+              - ./internal/policy/policies/

@@ -14,7 +14,7 @@ import (
 
 func HandleStartAuthenticator(a authn.Authenticator) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		u := a.NewSession()
+		u := a.NewSession(ctx.Get("Referer"))
 		ctx.Redirect(u, http.StatusTemporaryRedirect)
 
 		ctx.Write([]byte(u))
@@ -25,6 +25,8 @@ func HandleStartAuthenticator(a authn.Authenticator) fiber.Handler {
 func HandleGithubAuthentication(a authn.Authenticator, stor storage.Storage) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		code := ctx.Query("code", "")
+		state := ctx.Query("state", "")
+
 		if code == "" {
 			ctx.Status(http.StatusUnauthorized)
 			ctx.Write([]byte(http.StatusText(http.StatusUnauthorized)))
@@ -53,6 +55,8 @@ func HandleGithubAuthentication(a authn.Authenticator, stor storage.Storage) fib
 				Expires: time.Now().UTC().Add(time.Hour),
 			},
 		)
+
+		ctx.Redirect(state, http.StatusTemporaryRedirect)
 		return nil
 	}
 }
