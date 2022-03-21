@@ -92,6 +92,7 @@ func NewServer() *Server {
 // constructRoutes adds in all of the specific and generic route handlers
 func (s *Server) constructRoutes() {
 	s.s.Get("/", handlers.Index)
+	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.pol))
 	s.s.Get("/package", handlers.Package)
 	s.s.Get("/*.git", handlers.Git)
 	s.s.Get("/*.git/info/refs", handlers.AdvertiseReference(s.stor))

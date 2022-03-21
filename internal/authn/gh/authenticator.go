@@ -47,8 +47,8 @@ func New(
 	}
 }
 
-func (gh *GithubAuthenticator) NewSession() string {
-	return gh.conf.AuthCodeURL("no-state")
+func (gh *GithubAuthenticator) NewSession(state string) string {
+	return gh.conf.AuthCodeURL(state)
 }
 
 func (gh *GithubAuthenticator) UID(token string) (string, error) {

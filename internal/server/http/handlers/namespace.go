@@ -90,3 +90,56 @@ func GetNamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
 		return nil
 	}
 }
+
+func FENamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		log.Info().Msg("rendering namespace")
+
+		ns := ctx.Params("namespace")
+		uid := ctx.Locals(middleware.USER_ID).(string)
+		auth := ctx.Locals(middleware.AUTHENTICATED).(bool)
+
+		perms := n.GetNamespacePermissions(ns)
+		nspc, err := n.GetNamespace(ns)
+		if err != nil {
+			ctx.Status(http.StatusNotFound)
+			ctx.Render(
+				"error", fiber.Map{
+					"Code":    http.StatusNotFound,
+					"Message": "Ooops... That namespace doesn't appear to exist...",
+					"Anon":    !auth,
+				},
+			)
+			return nil
+		}
+
+		allow := p.Evaluate(
+			policy.NamespaceRead, policy.PolicyRequest{
+				UserID:               uid,
+				NamespacePermissions: perms,
+				Namespace:            nspc,
+			},
+		)
+
+		if !allow {
+			ctx.Status(http.StatusForbidden)
+			ctx.Render(
+				"error", fiber.Map{
+					"Code":    http.StatusForbidden,
+					"Message": "Ooops... You don't appear to have permission to see that...",
+					"Anon":    !auth,
+				},
+			)
+			return nil
+		}
+
+		ctx.Render(
+			"namespace", fiber.Map{
+				"Name":   nspc.Name,
+				"Public": nspc.Public,
+				"Anon":   !auth,
+			},
+		)
+		return nil
+	}
+}
