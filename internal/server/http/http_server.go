@@ -20,6 +20,7 @@ import (
 	"github.com/Jameslikestea/grm/internal/storage"
 	"github.com/Jameslikestea/grm/internal/storage/cql"
 	"github.com/Jameslikestea/grm/internal/storage/memory"
+	"github.com/Jameslikestea/grm/internal/storage/s3aws"
 )
 
 type Server struct {
@@ -46,8 +47,8 @@ func NewServer() *Server {
 	// 	stor = mysql.NewSQLLiteStorage()
 	// case "POSTGRES":
 	// 	stor = postgres.NewSQLLiteStorage()
-	// case "S3":
-	// 	stor = s3.NewS3Storage()
+	case "S3":
+		stor = s3.NewS3Storage()
 	case "CQL":
 		stor = cql.NewCQLStorage()
 	default:

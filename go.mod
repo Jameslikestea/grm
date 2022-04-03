@@ -18,8 +18,12 @@ require (
 require (
 	entgo.io/ent v0.10.0
 	gg-scm.io/pkg/git v0.9.0
+	github.com/aws/aws-sdk-go v1.43.31
+	github.com/aws/aws-sdk-go-v2/config v1.15.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.3 // indirect
 	github.com/coreos/go-semver v0.3.0
 	github.com/leodido/go-conventionalcommits v0.9.0
+	github.com/minio/minio-go/v7 v7.0.23
 	github.com/open-policy-agent/opa v0.38.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
