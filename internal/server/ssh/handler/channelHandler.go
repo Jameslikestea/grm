@@ -22,13 +22,20 @@ func cleanCommand(b []byte) string {
 			return r
 		}, p,
 	)
-	return clean
+
+	// Find first occurence of git
+	idx := strings.Index(clean, "git")
+	if idx == -1 {
+		return ""
+	}
+
+	return clean[idx:]
 }
 
 func cleanRepo(s string) string {
 	clean := strings.Map(
 		func(r rune) rune {
-			if unicode.IsLetter(r) || unicode.IsNumber(r) || r == '.' || r == '-' {
+			if unicode.IsLetter(r) || unicode.IsNumber(r) || r == '.' || r == '-' || r == '/' {
 				return r
 			}
 			return -1

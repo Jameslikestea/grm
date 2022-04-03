@@ -3,16 +3,13 @@ package s3
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/hex"
+	"encoding/gob"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"strconv"
-	"strings"
-	"sync"
 	"syscall"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -26,59 +23,6 @@ import (
 )
 
 var _ storage.Storage = &S3Storage{}
-
-type objectList struct {
-	list  []storage.Object
-	hash  []plumbing.Hash
-	count int64
-	mu    sync.Mutex
-}
-
-func (o *objectList) Append(object storage.Object) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.list = append(o.list, object)
-}
-
-func (o *objectList) AppendHash(hash plumbing.Hash) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.hash = append(o.hash, hash)
-}
-
-func (o *objectList) List() []storage.Object {
-	return o.list
-}
-
-func (o *objectList) ListHash() []plumbing.Hash {
-	return o.hash
-}
-
-func (o *objectList) Add() {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.count++
-}
-
-func (o *objectList) Sub() {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.count--
-}
-
-func (o *objectList) Wait() {
-	t := time.Now().Add(time.Second * 10)
-	for {
-		if o.count <= 0 {
-			break
-		}
-
-		if time.Now().After(t) {
-			log.Info().Int64("count", o.count).Msg("Waiting for Objects")
-			t = time.Now().Add(time.Second * 10)
-		}
-	}
-}
 
 type S3Storage struct {
 	sess *session.Session
@@ -125,21 +69,116 @@ func checkLimit() {
 	}
 }
 
-func (s2 S3Storage) StoreObject(s string, object storage.Object, i int) error {
+func (s2 S3Storage) getReferenceGob(s string) (map[plumbing.ReferenceName]plumbing.Hash, error) {
 	bucket := config.GetStorageS3Bucket()
-	hash := object.Hash.String()
-	key := fmt.Sprintf("%s/objects/%s/%s", s, hash[0:2], hash)
-	content := bytes.NewReader(object.Content)
+	key := fmt.Sprintf("%s/references.gob", s)
+	m := map[plumbing.ReferenceName]plumbing.Hash{}
 
-	input := &s3.PutObjectInput{
-		Bucket:  &bucket,
-		Key:     &key,
-		Body:    content,
-		Tagging: aws.String(fmt.Sprintf("type=%d", object.Type)),
+	input := &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
 	}
 
-	_, err := s2.sc.PutObject(input)
+	o, err := s2.sc.GetObject(input)
+	if err != nil {
+		return m, err
+	}
 
+	err = gob.NewDecoder(o.Body).Decode(&m)
+	if err != nil {
+		return m, err
+	}
+
+	return m, nil
+}
+
+func (s2 S3Storage) storeReferenceGob(s string, refs map[plumbing.ReferenceName]plumbing.Hash) error {
+	bucket := config.GetStorageS3Bucket()
+	key := fmt.Sprintf("%s/references.gob", s)
+
+	b := bytes.NewBuffer([]byte{})
+
+	err := gob.NewEncoder(b).Encode(refs)
+	if err != nil {
+		return err
+	}
+
+	input := &s3.PutObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+		Body:   bytes.NewReader(b.Bytes()),
+	}
+
+	_, err = s2.sc.PutObject(input)
+
+	return err
+}
+
+func (s2 S3Storage) getObjectsGob(s string) (map[plumbing.Hash]storage.Object, error) {
+	bucket := config.GetStorageS3Bucket()
+	key := fmt.Sprintf("%s/objects.gob", s)
+	m := map[plumbing.Hash]storage.Object{}
+
+	input := &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	}
+
+	o, err := s2.sc.GetObject(input)
+	if err != nil {
+		return m, err
+	}
+
+	err = gob.NewDecoder(o.Body).Decode(&m)
+	if err != nil {
+		return m, err
+	}
+
+	return m, nil
+}
+
+func (s2 S3Storage) storeObjectGob(s string, objs map[plumbing.Hash]storage.Object) error {
+	bucket := config.GetStorageS3Bucket()
+	key := fmt.Sprintf("%s/objects.gob", s)
+
+	b := bytes.NewBuffer([]byte{})
+
+	err := gob.NewEncoder(b).Encode(objs)
+	if err != nil {
+		return err
+	}
+
+	input := &s3.PutObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+		Body:   bytes.NewReader(b.Bytes()),
+	}
+
+	_, err = s2.sc.PutObject(input)
+
+	return err
+}
+
+func (s2 S3Storage) StoreObject(s string, object storage.Object, i int) error {
+	objs, err := s2.getObjectsGob(s)
+	log.Debug().Err(err).Interface("objects", objs).Msg("get object gob")
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				// Do nothing
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	objs[object.Hash] = object
+	log.Debug().Interface("objects", objs).Msg("updated hashmap")
+
+	err = s2.storeObjectGob(s, objs)
 	return err
 }
 
@@ -162,8 +201,9 @@ func (s2 S3Storage) GenerateHashKey() error {
 		Content: models.Marshal(hk),
 	}
 
+	log.Debug().Msg("Generated Hash Key")
 	err = s2.StoreObject("_internal._hashkey", o, 0)
-
+	log.Debug().Err(err).Msg("Storing Hash Key")
 	return err
 }
 
@@ -179,222 +219,121 @@ func (s2 S3Storage) GetHashKey() ([]storage.HashKey, error) {
 	return hk, nil
 }
 
-func (s2 S3Storage) storeReference(s string, reference storage.Reference) error {
-	bucket := config.GetStorageS3Bucket()
-	key := fmt.Sprintf("%s/references/%X", s, reference.Name.String())
-	content := strings.NewReader(fmt.Sprintf("%s", reference.Hash.String()))
-
-	input := &s3.PutObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-		Body:   content,
-	}
-
-	_, err := s2.sc.PutObject(input)
-
-	return err
-
-	return nil
-}
-
 func (s2 S3Storage) StoreReferences(s string, references []storage.Reference) error {
-	for _, ref := range references {
-		s2.storeReference(s, ref)
-	}
-
-	return nil
-}
-
-func (s2 S3Storage) StoreObjects(s string, objects []storage.Object) error {
-	concurrency := config.GetStorageS3Concurrency()
-	c := make(chan storage.Object, concurrency)
-
-	for i := 0; i < concurrency; i++ {
-		go func(in <-chan storage.Object) {
-			for {
-				o, ok := <-in
-				if !ok {
-					break
-				}
-				s2.StoreObject(s, o, 0)
-			}
-		}(c)
-	}
-
-	for _, obj := range objects {
-		c <- obj
-	}
-	close(c)
-
-	return nil
-}
-
-func (s2 S3Storage) getReference(s, refname string) (storage.Reference, error) {
-	bucket := config.GetStorageS3Bucket()
-	key := fmt.Sprintf("%s/references/%X", s, refname)
-
-	getObjectInput := &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-
-	obj, err := s2.sc.GetObject(getObjectInput)
-
+	refs, err := s2.getReferenceGob(s)
 	if err != nil {
-		log.Warn().Str("Key", key).Err(err).Msg("Cannot Get Object")
-		return storage.Reference{}, err
-	}
-
-	content, err := ioutil.ReadAll(obj.Body)
-	if err != nil {
-		return storage.Reference{}, err
-	}
-
-	hash := plumbing.NewHash(string(content))
-
-	return storage.Reference{
-		Name: plumbing.ReferenceName(refname),
-		Hash: hash,
-	}, nil
-}
-
-func (s2 S3Storage) ListReferences(s string) ([]storage.Reference, error) {
-	bucket := config.GetStorageS3Bucket()
-	prefix := fmt.Sprintf("%s/references/", s)
-
-	objectListInput := &s3.ListObjectsV2Input{
-		Bucket: &bucket,
-		Prefix: &prefix,
-	}
-
-	var st []storage.Reference
-
-	s2.sc.ListObjectsV2Pages(
-		objectListInput, func(output *s3.ListObjectsV2Output, b bool) bool {
-			log.Trace().Msg("Got Page")
-			for _, ref := range output.Contents {
-				str := strings.TrimPrefix(*ref.Key, prefix)
-				name, err := hex.DecodeString(str)
-				if err != nil {
-					continue
-				}
-
-				reference, err := s2.getReference(s, string(name))
-				if err != nil {
-					log.Warn().Err(err).Msg("Cannot Get Reference")
-				}
-
-				st = append(st, reference)
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				// Do nothing
+			default:
+				return err
 			}
-			return b
-		},
-	)
-
-	return st, nil
-}
-
-func (s2 S3Storage) ListObjects(s string) ([]storage.Object, error) {
-	bucket := config.GetStorageS3Bucket()
-	concurrency := config.GetStorageS3Concurrency()
-	prefix := fmt.Sprintf("%s/objects/", s)
-
-	objectListInput := &s3.ListObjectsV2Input{
-		Bucket: &bucket,
-		Prefix: &prefix,
-	}
-
-	os := new(objectList)
-
-	s2.sc.ListObjectsV2Pages(
-		objectListInput, func(output *s3.ListObjectsV2Output, b bool) bool {
-			log.Trace().Msg("Got Page")
-			for _, object := range output.Contents {
-				log.Debug().Str("key", *object.Key).Msg("Listed Object")
-				hashString := strings.TrimPrefix(*object.Key, prefix)[3:]
-
-				hash := plumbing.NewHash(hashString)
-				os.Add()
-				os.AppendHash(hash)
-
-			}
-			log.Debug().Bool("continue", !b).Msg("Last Page")
-			return !b
-		},
-	)
-
-	c := make(chan plumbing.Hash, concurrency)
-
-	for i := 0; i < concurrency; i++ {
-		go func(s string, h chan plumbing.Hash) {
-			for {
-				hash, ok := <-h
-				if !ok {
-					break
-				}
-				obj, err := s2.GetObject(s, hash)
-				if err != nil {
-					log.Warn().Err(err).Msg("Cannot Get Object")
-					continue
-				}
-
-				os.Append(obj)
-				os.Sub()
-			}
-		}(s, c)
-	}
-
-	for _, h := range os.hash {
-		c <- h
-	}
-
-	close(c)
-	os.Wait()
-
-	log.Info().Int("objects", len(os.List())).Msg("Receieved Objects")
-
-	return os.List(), nil
-}
-
-func (s2 S3Storage) GetObject(s string, hash plumbing.Hash) (storage.Object, error) {
-	bucket := config.GetStorageS3Bucket()
-	key := fmt.Sprintf("%s/objects/%s/%s", s, hash.String()[0:2], hash.String())
-
-	getInput := &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-	getTagInput := &s3.GetObjectTaggingInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-
-	tagOut, err := s2.sc.GetObjectTagging(getTagInput)
-	if err != nil {
-		return storage.Object{}, err
-	}
-
-	objOut, err := s2.sc.GetObject(getInput)
-	if err != nil {
-		return storage.Object{}, err
-	}
-
-	t := -1
-
-	for _, tag := range tagOut.TagSet {
-		if *tag.Key == "type" {
-			t, err = strconv.Atoi(*tag.Value)
-			if err != nil {
-				log.Warn().Err(err).Msg("Cannot convert tag to type")
-			}
+		} else {
+			return err
 		}
 	}
 
-	content, _ := ioutil.ReadAll(objOut.Body)
-	pt := plumbing.ObjectType(t)
+	for _, ref := range references {
+		refs[ref.Name] = ref.Hash
+	}
 
-	return storage.Object{
-		Hash:    hash,
-		Content: content,
-		Type:    pt,
-	}, nil
+	err = s2.storeReferenceGob(s, refs)
+
+	return err
+}
+
+func (s2 S3Storage) StoreObjects(s string, objects []storage.Object) error {
+	objs, err := s2.getObjectsGob(s)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				// Do nothing
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	for _, obj := range objects {
+		objs[obj.Hash] = obj
+	}
+
+	err = s2.storeObjectGob(s, objs)
+
+	return err
+}
+
+func (s2 S3Storage) ListReferences(s string) ([]storage.Reference, error) {
+	refs, err := s2.getReferenceGob(s)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				// Do nothing
+			default:
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	var references []storage.Reference
+
+	for ref, hash := range refs {
+		references = append(references, storage.Reference{Name: ref, Hash: hash})
+	}
+
+	return references, nil
+}
+
+func (s2 S3Storage) ListObjects(s string) ([]storage.Object, error) {
+	objs, err := s2.getObjectsGob(s)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				// Do nothing
+			default:
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	var os []storage.Object
+
+	for _, obj := range objs {
+		os = append(os, obj)
+	}
+
+	return os, nil
+}
+
+func (s2 S3Storage) GetObject(s string, hash plumbing.Hash) (storage.Object, error) {
+	objs, err := s2.getObjectsGob(s)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				// Do nothing
+			default:
+				return storage.Object{}, err
+			}
+		} else {
+			return storage.Object{}, err
+		}
+	}
+
+	o, ok := objs[hash]
+	if !ok {
+		return storage.Object{}, errors.New("cannot find object")
+	}
+
+	return o, nil
 }
