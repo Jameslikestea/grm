@@ -42,6 +42,9 @@ func cleanRepo(s string) string {
 		}, s,
 	)
 
+	clean = strings.TrimPrefix(clean, ".")
+	clean = strings.TrimPrefix(clean, "/")
+
 	return clean
 }
 
