@@ -5,9 +5,9 @@ var _ Model = RepoPermission{}
 var _ Model = CreateRepoRequest{}
 
 type Repo struct {
-	Name      string    `json:"name"`
-	Namespace Namespace `json:"namespace"`
-	Public    bool      `json:"public"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Public    bool   `json:"public"`
 }
 
 type RepoPermission struct {
