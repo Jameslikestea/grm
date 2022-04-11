@@ -37,6 +37,8 @@ func SetDefaults() {
 	viper.SetDefault(storageS3SecretKey, "")
 	viper.SetDefault(storageS3SSL, true)
 	viper.SetDefault(storageS3Bucket, "grmpkg")
+	viper.SetDefault(storageS3Concurrency, 1000)
+	viper.SetDefault(storageS3Region, "us-east-1")
 
 	viper.SetDefault(storageCQLEndpoint, "")
 	viper.SetDefault(storageCQLUsername, "")
