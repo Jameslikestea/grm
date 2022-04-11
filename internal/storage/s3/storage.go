@@ -69,10 +69,7 @@ func (s2 S3Storage) StoreObject(s string, object storage.Object, i int) error {
 	}
 
 	if i > 0 {
-		options.UserTags["grm-expire"] = fmt.Sprintf(
-			"%d",
-			time.Now().Add(time.Duration(i)*time.Second).UTC().Format(time.RFC3339),
-		)
+		options.UserTags["grm-expire"] = time.Now().Add(time.Duration(i) * time.Second).UTC().Format(time.RFC3339)
 	}
 
 	info, err := s2.mc.PutObject(
