@@ -15,6 +15,8 @@ import (
 	"github.com/Jameslikestea/grm/internal/namespace"
 	servicens "github.com/Jameslikestea/grm/internal/namespace/service"
 	"github.com/Jameslikestea/grm/internal/policy"
+	"github.com/Jameslikestea/grm/internal/repository"
+	servicers "github.com/Jameslikestea/grm/internal/repository/service"
 	"github.com/Jameslikestea/grm/internal/server/http/handlers"
 	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 	"github.com/Jameslikestea/grm/internal/storage"
@@ -29,6 +31,7 @@ type Server struct {
 	authn authn.Authenticator
 	pol   policy.Manager
 	ns    namespace.Manager
+	rs    repository.Manager
 }
 
 func NewServer() *Server {
@@ -69,6 +72,7 @@ func NewServer() *Server {
 	}
 
 	ns := servicens.New(stor)
+	rs := servicers.New(stor)
 
 	s := &Server{
 		s: fiber.New(
@@ -82,6 +86,7 @@ func NewServer() *Server {
 		authn: authn,
 		pol:   pol,
 		ns:    ns,
+		rs:    rs,
 	}
 
 	s.constructMiddleware()
@@ -93,11 +98,14 @@ func NewServer() *Server {
 // constructRoutes adds in all of the specific and generic route handlers
 func (s *Server) constructRoutes() {
 	s.s.Get("/", handlers.Index)
-	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.pol))
-	s.s.Get("/package", handlers.Package)
+
 	s.s.Get("/*.git", handlers.Git)
 	s.s.Get("/*.git/info/refs", handlers.AdvertiseReference(s.stor))
 	s.s.Post("/*.git/git-upload-pack", handlers.UploadPack(s.stor))
+	
+	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.rs, s.pol))
+	s.s.Get("/:namespace/:repo", handlers.FERepository(s.ns, s.rs, s.pol))
+	s.s.Get("/package", handlers.Package)
 
 	s.s.Get("/authn/start", handlers.HandleStartAuthenticator(s.authn))
 	s.s.Get("/authn/github", handlers.HandleGithubAuthentication(s.authn, s.stor))
@@ -105,7 +113,8 @@ func (s *Server) constructRoutes() {
 
 	s.s.Post("/api/ns/:namespace", handlers.CreateNamespace(s.ns, s.pol))
 	s.s.Get("/api/ns/:namespace", handlers.GetNamespace(s.ns, s.pol))
-	// s.s.Post("/api/ns/:namespace/r/:repo")
+	s.s.Post("/api/ns/:namespace/r/:repo", handlers.CreateRepository(s.ns, s.rs, s.pol))
+	s.s.Get("/api/ns/:namespace/r/:repo", handlers.GetRepository(s.ns, s.rs, s.pol))
 
 	s.s.Get("/*", handlers.Repository)
 

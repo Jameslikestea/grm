@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/rs/zerolog/log"
@@ -15,8 +16,10 @@ var _ repository.Manager = (*Service)(nil)
 
 const hashSalt = "repo:"
 const hashPermSalt = "repo:permission:"
+const hashNsSalt = "repo:ns:"
 const repo = "_internal._repo"
 const permRepo = "_internal._repo._permissions"
+const nsRepo = "_internal._repo._namespace"
 
 type Service struct {
 	stor storage.Storage
@@ -36,6 +39,16 @@ func (s *Service) CreateRepo(req models.CreateRepoRequest) models.Repo {
 	}
 
 	h := plumbing.ComputeHash(0, []byte(hashSalt+":"+re.Namespace+":"+re.Name))
+	nsh := plumbing.ComputeHash(0, []byte(hashNsSalt+re.Namespace))
+
+	repos, err := s.GetReposByNamespace(req.Namespace)
+	if err != nil {
+		repos = []models.Repo{
+			re,
+		}
+	} else {
+		repos = append(repos, re)
+	}
 
 	obj := storage.Object{
 		Hash:    h,
@@ -43,6 +56,7 @@ func (s *Service) CreateRepo(req models.CreateRepoRequest) models.Repo {
 		Content: models.Marshal(re),
 	}
 	s.stor.StoreObject(repo, obj, 0)
+	s.stor.StoreObject(nsRepo, storage.Object{Hash: nsh, Type: 0, Content: models.Marshal(repos)}, 0)
 
 	return re
 }
@@ -112,6 +126,19 @@ func (s *Service) GetRepo(namespace, r string) (models.Repo, error) {
 	return ns, err
 }
 
+func (s *Service) GetReposByNamespace(namespace string) ([]models.Repo, error) {
+	var ns []models.Repo
+	h := plumbing.ComputeHash(0, []byte(hashNsSalt+namespace))
+	o, err := s.stor.GetObject(nsRepo, h)
+	if err != nil {
+		return ns, err
+	}
+
+	err = models.Unmarshal(o.Content, &ns)
+
+	return ns, nil
+}
+
 func (s *Service) GetRepoPermissions(namespace, r string) []models.RepoPermission {
 	var m []models.RepoPermission
 	h := plumbing.ComputeHash(0, []byte(hashPermSalt+r))
@@ -132,4 +159,18 @@ func (s *Service) GetRepoUserPermissions(namespace, r, uid string) models.RepoPe
 	}
 	models.Unmarshal(o.Content, &m)
 	return m
+}
+
+func (s *Service) GetTags(ns, r string) []string {
+	var tags []string
+
+	references, _ := s.stor.ListReferences(ns + "/" + r + ".git")
+
+	for _, ref := range references {
+		tags = append(tags, ref.Name.Short())
+	}
+
+	sort.Strings(tags)
+
+	return tags
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/Jameslikestea/grm/internal/models"
 	"github.com/Jameslikestea/grm/internal/namespace"
 	"github.com/Jameslikestea/grm/internal/policy"
+	"github.com/Jameslikestea/grm/internal/repository"
 	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 )
 
@@ -91,7 +92,7 @@ func GetNamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
 	}
 }
 
-func FENamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
+func FENamespace(n namespace.Manager, r repository.Manager, p policy.Manager) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		log.Info().Msg("rendering namespace")
 
@@ -111,6 +112,27 @@ func FENamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
 				},
 			)
 			return nil
+		}
+
+		repos, err := r.GetReposByNamespace(ns)
+		if err != nil {
+			log.Warn().Err(err).Str("namespace", ns).Msg("Cannot get repos for namespace")
+		}
+
+		var repoList []models.Repo
+		for _, repo := range repos {
+			rperm := r.GetRepoPermissions(ns, repo.Name)
+			a := p.Evaluate(
+				policy.RepoRead, policy.PolicyRequest{
+					UserID:               uid,
+					NamespacePermissions: perms,
+					RepoPermissions:      rperm,
+					Repo:                 repo,
+				},
+			)
+			if a {
+				repoList = append(repoList, repo)
+			}
 		}
 
 		allow := p.Evaluate(
@@ -137,6 +159,7 @@ func FENamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
 			"namespace", fiber.Map{
 				"Name":   nspc.Name,
 				"Public": nspc.Public,
+				"Repos":  repoList,
 				"Anon":   !auth,
 			},
 		)

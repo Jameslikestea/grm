@@ -8,6 +8,8 @@ type Manager interface {
 	UpdateRepoPermissions(ns models.RepoPermission)
 
 	GetRepo(namespace, repo string) (models.Repo, error)
+	GetTags(namespace, repo string) []string
+	GetReposByNamespace(namespace string) ([]models.Repo, error)
 	GetRepoPermissions(namespace, repo string) []models.RepoPermission
 	GetRepoUserPermissions(namespace, repo, uid string) models.RepoPermission
 }
