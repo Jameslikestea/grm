@@ -89,7 +89,7 @@ func HandleAddSSHKey(ps pubkey.Manager) fiber.Handler {
 
 		err := ps.StoreKey(
 			models.UserPubKey{
-				Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDIbGv8RbhxbZ+UXkqkOmNOGCHvKqUcecuLZAeG6j3YDRJ8jnWaJMmfgsiUbot9Au2bqCItXsK0A027IjbY6QeMmZcSEUQfEbcc72/aWxYuyp5rT78lcF6ZkjTnAu6GOPfQG92uxkSHqvkpOpsoOw8dzOzVWeBz5aggS1B8yRQId5OwtAKz8BvmVuFocBlLZLaXAniGzwGqOeYaqIkDFyZxy9gG5J80fu61tBEDcb8TNdXg571oDaP48g+4r+X8SwnSQO3b7Bd8EYaZVdEE2g5qMOutl6ibLqYbUHpsNTjq88JiYQlC/yKWScCvOniaA4rKDNBN9asgN2gnlGcHjYWAclOc8zxoRXByOjQBBcJmHIr52MGRFZfGMYg0MuQlPXIEzTyHd23p3qgKuWD/kXpb6m20De02e75j/sBntAeGnjVYE6gctbHrRxV0lXOf2PF0XLZMVJswnJi1oxdNjqhiC/xJuUnrS60HIRmsN4KTObji+RLtIZkt9jF1kIpK27M= james@JC-LAPTOP",
+				Key: string(ctx.Body()),
 				UID: uid,
 			},
 		)
