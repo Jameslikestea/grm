@@ -8,6 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/Jameslikestea/grm/internal/authn"
+	"github.com/Jameslikestea/grm/internal/models"
+	"github.com/Jameslikestea/grm/internal/pubkey"
 	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 	"github.com/Jameslikestea/grm/internal/storage"
 )
@@ -73,4 +75,30 @@ func HandleMe(ctx *fiber.Ctx) error {
 	)
 
 	return nil
+}
+
+func HandleAddSSHKey(ps pubkey.Manager) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		uid := ctx.Locals(middleware.USER_ID).(string)
+		auth := ctx.Locals(middleware.AUTHENTICATED).(bool)
+
+		if !auth {
+			ctx.Status(http.StatusForbidden)
+			ctx.Write([]byte(http.StatusText(http.StatusForbidden)))
+		}
+
+		err := ps.StoreKey(
+			models.UserPubKey{
+				Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDIbGv8RbhxbZ+UXkqkOmNOGCHvKqUcecuLZAeG6j3YDRJ8jnWaJMmfgsiUbot9Au2bqCItXsK0A027IjbY6QeMmZcSEUQfEbcc72/aWxYuyp5rT78lcF6ZkjTnAu6GOPfQG92uxkSHqvkpOpsoOw8dzOzVWeBz5aggS1B8yRQId5OwtAKz8BvmVuFocBlLZLaXAniGzwGqOeYaqIkDFyZxy9gG5J80fu61tBEDcb8TNdXg571oDaP48g+4r+X8SwnSQO3b7Bd8EYaZVdEE2g5qMOutl6ibLqYbUHpsNTjq88JiYQlC/yKWScCvOniaA4rKDNBN9asgN2gnlGcHjYWAclOc8zxoRXByOjQBBcJmHIr52MGRFZfGMYg0MuQlPXIEzTyHd23p3qgKuWD/kXpb6m20De02e75j/sBntAeGnjVYE6gctbHrRxV0lXOf2PF0XLZMVJswnJi1oxdNjqhiC/xJuUnrS60HIRmsN4KTObji+RLtIZkt9jF1kIpK27M= james@JC-LAPTOP",
+				UID: uid,
+			},
+		)
+
+		if err != nil {
+			ctx.Status(http.StatusBadRequest)
+			ctx.Write([]byte(fmt.Sprintf("error: %v", err)))
+		}
+
+		return nil
+	}
 }

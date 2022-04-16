@@ -10,6 +10,7 @@ type Model interface{}
 
 var _ Model = User{}
 var _ Model = UserSession{}
+var _ Model = UserPubKey{}
 
 // User is the model of connected users from 3rd party providers
 // such as github
@@ -23,4 +24,10 @@ type UserSession struct {
 	Hash    plumbing.Hash
 	User    User
 	Expires time.Time
+}
+
+// UserPubKey is a model storing the uid against the SSH Public Key
+type UserPubKey struct {
+	UID string
+	Key string
 }

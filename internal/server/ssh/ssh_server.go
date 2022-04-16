@@ -133,7 +133,7 @@ func (s *Server) handleConnection(keyID string, chans <-chan ssh.NewChannel) {
 		if err != nil {
 			log.Warn().Err(err).Msg("Cannot accept SSH channel")
 		}
-		go handler.SSHChannelHandler(ch, reqs, s.stor)
+		go handler.SSHChannelHandler(ch, reqs, s.stor, keyID)
 	}
 }
 

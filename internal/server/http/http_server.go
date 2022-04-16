@@ -15,6 +15,8 @@ import (
 	"github.com/Jameslikestea/grm/internal/namespace"
 	servicens "github.com/Jameslikestea/grm/internal/namespace/service"
 	"github.com/Jameslikestea/grm/internal/policy"
+	"github.com/Jameslikestea/grm/internal/pubkey"
+	serviceps "github.com/Jameslikestea/grm/internal/pubkey/service"
 	"github.com/Jameslikestea/grm/internal/repository"
 	servicers "github.com/Jameslikestea/grm/internal/repository/service"
 	"github.com/Jameslikestea/grm/internal/server/http/handlers"
@@ -32,6 +34,7 @@ type Server struct {
 	pol   policy.Manager
 	ns    namespace.Manager
 	rs    repository.Manager
+	ps    pubkey.Manager
 }
 
 func NewServer() *Server {
@@ -73,6 +76,7 @@ func NewServer() *Server {
 
 	ns := servicens.New(stor)
 	rs := servicers.New(stor)
+	ps := serviceps.New(stor)
 
 	s := &Server{
 		s: fiber.New(
@@ -87,6 +91,7 @@ func NewServer() *Server {
 		pol:   pol,
 		ns:    ns,
 		rs:    rs,
+		ps:    ps,
 	}
 
 	s.constructMiddleware()
@@ -99,17 +104,18 @@ func NewServer() *Server {
 func (s *Server) constructRoutes() {
 	s.s.Get("/", handlers.Index)
 
-	s.s.Get("/*.git", handlers.Git)
-	s.s.Get("/*.git/info/refs", handlers.AdvertiseReference(s.stor))
-	s.s.Post("/*.git/git-upload-pack", handlers.UploadPack(s.stor))
-	
-	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.rs, s.pol))
-	s.s.Get("/:namespace/:repo", handlers.FERepository(s.ns, s.rs, s.pol))
-	s.s.Get("/package", handlers.Package)
-
 	s.s.Get("/authn/start", handlers.HandleStartAuthenticator(s.authn))
 	s.s.Get("/authn/github", handlers.HandleGithubAuthentication(s.authn, s.stor))
 	s.s.Get("/authn/me", handlers.HandleMe)
+	s.s.Post("/authn/ssh", handlers.HandleAddSSHKey(s.ps))
+
+	s.s.Get("/*.git", handlers.Git)
+	s.s.Get("/*.git/info/refs", handlers.AdvertiseReference(s.stor))
+	s.s.Post("/*.git/git-upload-pack", handlers.UploadPack(s.stor))
+
+	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.rs, s.pol))
+	s.s.Get("/:namespace/:repo", handlers.FERepository(s.ns, s.rs, s.pol))
+	s.s.Get("/package", handlers.Package)
 
 	s.s.Post("/api/ns/:namespace", handlers.CreateNamespace(s.ns, s.pol))
 	s.s.Get("/api/ns/:namespace", handlers.GetNamespace(s.ns, s.pol))
