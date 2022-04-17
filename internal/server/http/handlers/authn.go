@@ -8,6 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/Jameslikestea/grm/internal/authn"
+	"github.com/Jameslikestea/grm/internal/models"
+	"github.com/Jameslikestea/grm/internal/pubkey"
 	"github.com/Jameslikestea/grm/internal/server/http/middleware"
 	"github.com/Jameslikestea/grm/internal/storage"
 )
@@ -73,4 +75,30 @@ func HandleMe(ctx *fiber.Ctx) error {
 	)
 
 	return nil
+}
+
+func HandleAddSSHKey(ps pubkey.Manager) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		uid := ctx.Locals(middleware.USER_ID).(string)
+		auth := ctx.Locals(middleware.AUTHENTICATED).(bool)
+
+		if !auth {
+			ctx.Status(http.StatusForbidden)
+			ctx.Write([]byte(http.StatusText(http.StatusForbidden)))
+		}
+
+		err := ps.StoreKey(
+			models.UserPubKey{
+				Key: string(ctx.Body()),
+				UID: uid,
+			},
+		)
+
+		if err != nil {
+			ctx.Status(http.StatusBadRequest)
+			ctx.Write([]byte(fmt.Sprintf("error: %v", err)))
+		}
+
+		return nil
+	}
 }
