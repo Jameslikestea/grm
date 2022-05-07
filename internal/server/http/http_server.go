@@ -1,7 +1,9 @@
 package http
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -27,6 +29,9 @@ import (
 	"github.com/Jameslikestea/grm/internal/storage/s3aws"
 )
 
+//go:embed templates
+var _templates embed.FS
+
 type Server struct {
 	s     *fiber.App
 	stor  storage.Storage
@@ -38,7 +43,9 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	engine := html.New("./templates", ".html")
+	fsys, _ := fs.Sub(_templates, "templates")
+	engine := html.NewFileSystem(http.FS(fsys), ".html")
+	engine.Load()
 
 	var stor storage.Storage
 	var authn authn.Authenticator
@@ -103,6 +110,13 @@ func NewServer() *Server {
 // constructRoutes adds in all of the specific and generic route handlers
 func (s *Server) constructRoutes() {
 	s.s.Get("/", handlers.Index)
+
+	s.s.Get(
+		"/humans.txt", func(ctx *fiber.Ctx) error {
+			ctx.Render("humans", fiber.Map{})
+			return nil
+		},
+	)
 
 	s.s.Get("/authn/start", handlers.HandleStartAuthenticator(s.authn))
 	s.s.Get("/authn/github", handlers.HandleGithubAuthentication(s.authn, s.stor))
