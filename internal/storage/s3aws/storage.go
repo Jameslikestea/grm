@@ -65,7 +65,7 @@ func checkLimit() {
 	}
 
 	if nofiles.Cur < 65535 {
-		log.Panic().Msg("S3 Implementation Requires File Limits To Be Above 65534")
+		log.Panic().Uint64("current", nofiles.Cur).Msg("S3 Implementation Requires File Limits To Be Above 65534")
 	}
 }
 
