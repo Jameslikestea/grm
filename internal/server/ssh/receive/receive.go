@@ -2,6 +2,7 @@ package receive
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/packfile"
@@ -44,6 +45,16 @@ func SSHReceivePack(ch ssh.Channel, repo string, stor storage.Storage) {
 			mapper[obj.Hash] = obj
 		}
 
+		for _, ref := range validRefs {
+			ch.Stderr().Write([]byte(fmt.Sprintf("Server Validating: %s\n", ref.Name)))
+			// if !validateRef(ref, mapper) {
+			// 	report[ref.Name] = git.ReportItem{
+			// 		Ok:     false,
+			// 		Reason: "Could not validate object tree",
+			// 	}
+			// }
+		}
+
 		stor.StoreObjects(repo, objs)
 		stor.StoreReferences(repo, validRefs)
 	}
@@ -51,43 +62,82 @@ func SSHReceivePack(ch ssh.Channel, repo string, stor storage.Storage) {
 	report.Write(ch)
 }
 
-// validateObjects validates that the objects are required for the repository to function
-func validateObjects(
-	validRefs []storage.Reference,
-	repoObjects []storage.Object,
-	repo string,
-	stor storage.Storage,
-) []storage.Object {
-	currentObjs, err := stor.ListObjects(repo)
-	if err != nil {
-		log.Warn().Err(err).Msg("failed to validate objects")
-		return repoObjects
+func validateRef(reference storage.Reference, objs map[plumbing.Hash]storage.Object) bool {
+	obj, ok := objs[reference.Hash]
+
+	if !ok {
+		return false
 	}
 
-	seen := map[plumbing.Hash]bool{}
-	nObjs := map[plumbing.Hash]storage.Object{}
-	cache := map[plumbing.Hash]storage.Object{}
+	return validateObj(obj, objs)
+}
 
-	for _, obj := range currentObjs {
-		seen[obj.Hash] = true
-	}
-
-	for _, obj := range repoObjects {
-		cache[obj.Hash] = obj
-	}
-
-	for _, ref := range validRefs {
-		hunt(ref.Hash, cache, nObjs, seen)
-	}
-
-	newObjects := []storage.Object{}
-	for _, obj := range nObjs {
-		if _, ok := seen[obj.Hash]; !ok {
-			newObjects = append(newObjects, obj)
+func validateObj(obj storage.Object, objs map[plumbing.Hash]storage.Object) bool {
+	switch obj.Type {
+	case plumbing.CommitObject:
+		o := &plumbing.MemoryObject{}
+		o.SetType(plumbing.CommitObject)
+		o.SetSize(int64(len(obj.Content)))
+		o.Write(obj.Content)
+		commit := object.Commit{}
+		err := commit.Decode(o)
+		if err != nil {
+			return false
 		}
-	}
+		log.Debug().Msg("validating commit tree")
+		tree, ok := objs[commit.TreeHash]
+		if !ok {
+			return false
+		}
+		if !validateObj(tree, objs) {
+			return false
+		}
 
-	return newObjects
+		log.Debug().Int("parents", len(commit.ParentHashes)).Msg("validating commit parents")
+		for _, parentHash := range commit.ParentHashes {
+			parent, ok := objs[parentHash]
+			if !ok {
+				return false
+			}
+			if !validateObj(parent, objs) {
+				return false
+			}
+		}
+
+		return true
+	case plumbing.TreeObject:
+		o := &plumbing.MemoryObject{}
+		o.SetType(plumbing.TreeObject)
+		o.SetSize(int64(len(obj.Content)))
+		o.Write(obj.Content)
+		tree := object.Tree{}
+		err := tree.Decode(o)
+		if err != nil {
+			return false
+		}
+
+		log.Debug().Int("entries", len(tree.Entries)).Msg("validating tree entries")
+		for _, entry := range tree.Entries {
+			ob, ok := objs[entry.Hash]
+			if !ok {
+				return false
+			}
+			if !validateObj(ob, objs) {
+				return false
+			}
+		}
+		return true
+	case plumbing.BlobObject:
+		log.Debug().Msg("validating blob")
+		return true
+	case plumbing.TagObject:
+		return true
+	case plumbing.OFSDeltaObject:
+		return true
+	case plumbing.REFDeltaObject:
+		return true
+	}
+	return true
 }
 
 func hunt(hash plumbing.Hash, cache, nObjs map[plumbing.Hash]storage.Object, seen map[plumbing.Hash]bool) {
@@ -212,9 +262,14 @@ func decodePack(ch ssh.Channel, stor storage.Storage, repo string) []storage.Obj
 			if err != nil {
 				log.Error().Err(err).Bytes("src", s).Bytes("delta", d).Msg("Cannot apply delta")
 			}
+
+			m := &plumbing.MemoryObject{}
+			m.Write(bts)
+			m.SetType(t)
+			hash := m.Hash()
+
 			bufs[header.Offset] = bts
 			btyp[header.Offset] = t
-			hash := plumbing.ComputeHash(t, bts)
 			hahs[hash] = bts
 			htyp[hash] = t
 
@@ -232,9 +287,14 @@ func decodePack(ch ssh.Channel, stor storage.Storage, repo string) []storage.Obj
 			if err != nil {
 				log.Error().Err(err).Bytes("src", s).Bytes("delta", d).Msg("Cannot apply delta")
 			}
+
+			m := &plumbing.MemoryObject{}
+			m.Write(bts)
+			m.SetType(t)
+			hash := m.Hash()
+
 			bufs[header.Offset] = bts
 			btyp[header.Offset] = t
-			hash := plumbing.ComputeHash(t, bts)
 			hahs[hash] = bts
 			htyp[hash] = t
 		}

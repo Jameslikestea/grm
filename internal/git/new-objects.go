@@ -19,34 +19,34 @@ func GetNewObjects(
 		log.Error().Err(err).Msg("Cannot get objects from store")
 		return nil
 	}
-	cache := map[plumbing.Hash]storage.Object{}
-	seen := map[plumbing.Hash]bool{}
+	// cache := map[plumbing.Hash]storage.Object{}
+	// seen := map[plumbing.Hash]bool{}
+	//
+	// for _, obj := range objs {
+	// 	cache[obj.Hash] = obj
+	// }
+	//
+	// log.Info().Int("haves", len(haves)).Msg("Haves")
+	// for key := range haves {
+	// 	recurseFound(cache, seen, key)
+	// }
+	//
+	// log.Info().Int("seen", len(seen)).Msg("Found Seen")
+	//
+	// newObjs := map[plumbing.Hash]storage.Object{}
+	// for _, want := range wants {
+	// 	recurseFind(cache, newObjs, seen, want)
+	// }
+	//
+	// log.Info().Int("discovered", len(newObjs)).Msg("Found New")
+	// objList := make([]storage.Object, len(newObjs))
+	// i := 0
+	// for _, obj := range newObjs {
+	// 	objList[i] = obj
+	// 	i++
+	// }
 
-	for _, obj := range objs {
-		cache[obj.Hash] = obj
-	}
-
-	log.Info().Int("haves", len(haves)).Msg("Haves")
-	for key := range haves {
-		recurseFound(cache, seen, key)
-	}
-
-	log.Info().Int("seen", len(seen)).Msg("Found Seen")
-
-	newObjs := map[plumbing.Hash]storage.Object{}
-	for _, want := range wants {
-		recurseFind(cache, newObjs, seen, want)
-	}
-
-	log.Info().Int("discovered", len(newObjs)).Msg("Found New")
-	objList := make([]storage.Object, len(newObjs))
-	i := 0
-	for _, obj := range newObjs {
-		objList[i] = obj
-		i++
-	}
-
-	return objList
+	return objs
 }
 
 func recurseFound(cache map[plumbing.Hash]storage.Object, seen map[plumbing.Hash]bool, hash plumbing.Hash) {

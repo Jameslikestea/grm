@@ -129,6 +129,7 @@ func (s *Server) constructRoutes() {
 
 	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.rs, s.pol))
 	s.s.Get("/:namespace/:repo", handlers.FERepository(s.ns, s.rs, s.pol))
+	s.s.Get("/:namespace/:repo/*", handlers.FERepository(s.ns, s.rs, s.pol))
 	s.s.Get("/package", handlers.Package)
 
 	s.s.Post("/api/ns/:namespace", handlers.CreateNamespace(s.ns, s.pol))
