@@ -75,3 +75,13 @@ storage:
     ssl: true
   type: s3
 ```
+
+Once you have your configuration file defined, you can go ahead and run the process using
+
+```bash
+$ /bin/grmpkg
+```
+
+### Debugging
+
+You will need to ensure that the user that you run the process as has permission to log to the file that you set as the logfile.
