@@ -3,6 +3,8 @@
 Currently GRMPKG is not in a state where the UI can provide all of the necessary functionality to get it up and running.
 As such you will need to use the browser to authenticate and then a client like Postman or cURL to send requests to the API.
 
+> For all requests you will require your authentication cookie
+
 ## Obtaining a token
 
 To obtain a token you will need to go through the standard login flow, to do this, ensure that the process is running and then head to the HTTP interface in your browser.
