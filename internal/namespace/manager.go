@@ -10,4 +10,5 @@ type Manager interface {
 	GetNamespace(name string) (models.Namespace, error)
 	GetNamespacePermissions(namespace string) []models.NamespacePermission
 	GetNamespaceUserPermissions(namespace string, uid string) models.NamespacePermission
+	ListNamespaces() ([]models.Namespace, error)
 }

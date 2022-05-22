@@ -18,6 +18,10 @@
     <form class="d-flex" action="/authn/start" method="GET">
       <button class="btn btn-outline-success">Login</button>
     </form>
+    {{else}}
+    <form class="d-flex" action="/me" method="GET">
+      <button class="btn btn-outline-success">Account</button>
+    </form>
     {{end}}
   </div>
 </nav>
@@ -28,10 +32,38 @@
         <h5 class="card-title"><a href="/{{.Namespace}}">{{.Namespace}}</a>/{{.Name}}</h5>
         <h6 class="card-subtitle">{{if .Public}}Public{{else}}Private{{end}}</h6>
         {{range .Tags}}
-          <strong>{{ . }}</strong><br />
+          <span class="badge bg-primary">{{ . }}</span>
         {{end}}
       </div>
     </div>
+    {{ if .Admin }}
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Permissions</h5>
+        <table class="table table-striped">
+          <thead>
+          <tr>
+            <th>Username</th>
+            <th>Access</th>
+          </tr>
+          </thead>
+          {{ range .Permissions }}
+          <tr>
+            <td>{{ .UserID }}</td>
+            <td>
+              <select value="{{ if .Admin }}admin{{ else if .Write }}write{{ else }}read{{ end }}" class="form-control">
+                <option value="admin">Admin</option>
+                <option value="admin">Write</option>
+                <option value="admin">Read</option>
+              </select>
+            </td>
+          </tr>
+          {{ end }}
+        </table>
+        <button class="btn btn-primary">Save</button>
+      </div>
+    </div>
+    {{ end }}
   </div>
 </main>
 <footer class="footer mt-auto py-3 bg-dark text-center">

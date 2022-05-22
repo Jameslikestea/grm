@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
+	"github.com/Jameslikestea/grm/internal/authn"
 	"github.com/Jameslikestea/grm/internal/config"
 	"github.com/Jameslikestea/grm/internal/models"
 	"github.com/Jameslikestea/grm/internal/namespace"
@@ -110,7 +111,7 @@ func GetRepository(n namespace.Manager, r repository.Manager, p policy.Manager) 
 	}
 }
 
-func FERepository(n namespace.Manager, r repository.Manager, p policy.Manager) fiber.Handler {
+func FERepository(n namespace.Manager, r repository.Manager, p policy.Manager, a authn.Authenticator) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		ns := ctx.Params("namespace")
 		repo := ctx.Params("repo")
@@ -139,6 +140,24 @@ func FERepository(n namespace.Manager, r repository.Manager, p policy.Manager) f
 			},
 		)
 
+		admin := p.Evaluate(
+			policy.RepoAdmin, policy.PolicyRequest{
+				UserID:               uid,
+				Repo:                 namespace,
+				RepoPermissions:      perms,
+				NamespacePermissions: nsPerms,
+			},
+		)
+
+		for i, perm := range perms {
+			username, err := a.GetUsername(perm.UserID)
+			if err != nil {
+				continue
+			}
+			log.Info().Str("username", username).Msg("Looked up User")
+			perms[i].UserID = username
+		}
+
 		log.Info().Bool("allow", allow).Str("namespace", ns).Str("repo", repo).Str(
 			"user_id",
 			uid,
@@ -152,11 +171,13 @@ func FERepository(n namespace.Manager, r repository.Manager, p policy.Manager) f
 
 		ctx.Render(
 			"repository", fiber.Map{
-				"Base":      config.GetDomain(),
-				"Name":      namespace.Name,
-				"Namespace": namespace.Namespace,
-				"Tags":      tags,
-				"Anon":      !auth,
+				"Base":        config.GetDomain(),
+				"Name":        namespace.Name,
+				"Namespace":   namespace.Namespace,
+				"Tags":        tags,
+				"Anon":        !auth,
+				"Admin":       admin,
+				"Permissions": perms,
 			},
 		)
 

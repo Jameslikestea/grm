@@ -127,9 +127,11 @@ func (s *Server) constructRoutes() {
 	s.s.Get("/*.git/info/refs", handlers.AdvertiseReference(s.stor))
 	s.s.Post("/*.git/git-upload-pack", handlers.UploadPack(s.stor))
 
-	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.rs, s.pol))
-	s.s.Get("/:namespace/:repo", handlers.FERepository(s.ns, s.rs, s.pol))
-	s.s.Get("/:namespace/:repo/*", handlers.FERepository(s.ns, s.rs, s.pol))
+	s.s.Get("/me", handlers.FEMe(s.ns, s.rs, s.pol))
+
+	s.s.Get("/:namespace", handlers.FENamespace(s.ns, s.rs, s.pol, s.authn))
+	s.s.Get("/:namespace/:repo", handlers.FERepository(s.ns, s.rs, s.pol, s.authn))
+	s.s.Get("/:namespace/:repo/*", handlers.FERepository(s.ns, s.rs, s.pol, s.authn))
 	s.s.Get("/package", handlers.Package)
 
 	s.s.Post("/api/ns/:namespace", handlers.CreateNamespace(s.ns, s.pol))

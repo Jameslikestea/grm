@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
+	"github.com/Jameslikestea/grm/internal/authn"
 	"github.com/Jameslikestea/grm/internal/models"
 	"github.com/Jameslikestea/grm/internal/namespace"
 	"github.com/Jameslikestea/grm/internal/policy"
@@ -92,7 +93,7 @@ func GetNamespace(n namespace.Manager, p policy.Manager) fiber.Handler {
 	}
 }
 
-func FENamespace(n namespace.Manager, r repository.Manager, p policy.Manager) fiber.Handler {
+func FENamespace(n namespace.Manager, r repository.Manager, p policy.Manager, a authn.Authenticator) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		log.Info().Msg("rendering namespace")
 
@@ -143,6 +144,15 @@ func FENamespace(n namespace.Manager, r repository.Manager, p policy.Manager) fi
 			},
 		)
 
+		admin := p.Evaluate(
+			policy.NamespaceAdmin,
+			policy.PolicyRequest{
+				UserID:               uid,
+				NamespacePermissions: perms,
+				Namespace:            nspc,
+			},
+		)
+
 		if !allow {
 			ctx.Status(http.StatusForbidden)
 			ctx.Render(
@@ -155,12 +165,23 @@ func FENamespace(n namespace.Manager, r repository.Manager, p policy.Manager) fi
 			return nil
 		}
 
+		for i, perm := range perms {
+			username, err := a.GetUsername(perm.UserID)
+			if err != nil {
+				continue
+			}
+			log.Info().Str("username", username).Msg("Looked up User")
+			perms[i].UserID = username
+		}
+
 		ctx.Render(
 			"namespace", fiber.Map{
-				"Name":   nspc.Name,
-				"Public": nspc.Public,
-				"Repos":  repoList,
-				"Anon":   !auth,
+				"Name":        nspc.Name,
+				"Public":      nspc.Public,
+				"Repos":       repoList,
+				"Anon":        !auth,
+				"Admin":       admin,
+				"Permissions": perms,
 			},
 		)
 		return nil

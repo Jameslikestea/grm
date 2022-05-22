@@ -111,6 +111,24 @@ func (s *Service) GetNamespace(name string) (models.Namespace, error) {
 	return ns, err
 }
 
+func (s *Service) ListNamespaces() ([]models.Namespace, error) {
+	var ns []models.Namespace
+	l, err := s.stor.ListObjects(repo)
+	if err != nil {
+		return ns, err
+	}
+	var n models.Namespace
+	for _, o := range l {
+		err = json.Unmarshal(o.Content, &n)
+		if err != nil {
+			return ns, err
+		}
+		ns = append(ns, n)
+	}
+
+	return ns, nil
+}
+
 func (s *Service) GetNamespacePermissions(namespace string) []models.NamespacePermission {
 	var m []models.NamespacePermission
 	h := plumbing.ComputeHash(0, []byte(hashPermSalt+namespace))

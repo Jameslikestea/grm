@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -21,6 +24,11 @@ var _ authn.Authenticator = &GithubAuthenticator{}
 type GithubAuthenticator struct {
 	conf    *oauth2.Config
 	storage storage.Storage
+}
+
+type User struct {
+	Username string `json:"login"`
+	ID       int    `json:"id"`
 }
 
 func New(
@@ -52,18 +60,43 @@ func (gh *GithubAuthenticator) NewSession(state string) string {
 }
 
 func (gh *GithubAuthenticator) UID(token string) (string, error) {
-
-	type User struct {
-		Username string `json:"login"`
-		ID       int    `json:"id"`
-	}
-
 	client := gh.conf.Client(context.Background(), &oauth2.Token{AccessToken: token})
 	response, err := client.Get("https://api.github.com/user")
 	var m User
 	err = json.NewDecoder(response.Body).Decode(&m)
 	log.Info().Int("userid", m.ID).Msg("got UID")
 	return fmt.Sprintf("GH:%X", m.ID), err
+}
+
+func (gh *GithubAuthenticator) LookupUID(username string) (string, error) {
+	client := http.Client{
+		Timeout: time.Second * 5,
+	}
+
+	response, err := client.Get(fmt.Sprintf("https://api.github.com/users/%s", username))
+	var m User
+	err = json.NewDecoder(response.Body).Decode(&m)
+	return fmt.Sprintf("GH:%X", m.ID), err
+}
+
+func (gh *GithubAuthenticator) GetUsername(uid string) (string, error) {
+	client := http.Client{
+		Timeout: time.Second * 5,
+	}
+
+	id := strings.ReplaceAll(uid, "GH:", "")
+	iid, err := strconv.ParseUint(id, 16, 64)
+	if err != nil {
+		return "", err
+	}
+
+	response, err := client.Get(fmt.Sprintf("https://api.github.com/user/%d", iid))
+	if err != nil {
+		return "", err
+	}
+	var m User
+	err = json.NewDecoder(response.Body).Decode(&m)
+	return m.Username, err
 }
 
 func (gh *GithubAuthenticator) Register(token string) (string, error) {

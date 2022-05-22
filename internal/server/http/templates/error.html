@@ -17,6 +17,10 @@
     <form class="d-flex" action="/authn/start" method="GET">
       <button class="btn btn-outline-success">Login</button>
     </form>
+    {{else}}
+    <form class="d-flex" action="/me" method="GET">
+      <button class="btn btn-outline-success">Account</button>
+    </form>
     {{end}}
   </div>
 </nav>
