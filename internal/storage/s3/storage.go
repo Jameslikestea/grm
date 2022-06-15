@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Jameslikestea/d-badger/lock"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -280,4 +281,12 @@ func (s2 S3Storage) GetObject(s string, hash plumbing.Hash) (storage.Object, err
 		Content: content,
 		Hash:    hash,
 	}, nil
+}
+
+func (s2 S3Storage) Lock(string) (lock.Lock, error) {
+	return nil, nil
+}
+
+func (s2 S3Storage) Unlock(lock.Lock) error {
+	return nil
 }

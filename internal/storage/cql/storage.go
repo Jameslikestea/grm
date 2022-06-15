@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/Jameslikestea/d-badger/lock"
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -254,4 +255,13 @@ func (C CQLStorage) GetObject(s string, hash plumbing.Hash) (storage.Object, err
 	}
 
 	return os, nil
+}
+
+// These methods are not required for CQL Storage as the system is ACID compliant anyway
+func (c CQLStorage) Lock(string) (lock.Lock, error) {
+	return nil, nil
+}
+
+func (c CQLStorage) Unlock(lock.Lock) error {
+	return nil
 }

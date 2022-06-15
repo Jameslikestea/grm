@@ -6,8 +6,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"syscall"
-
+	"github.com/Jameslikestea/d-badger/lock"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -30,8 +29,6 @@ type S3Storage struct {
 }
 
 func NewS3Storage() *S3Storage {
-	checkLimit()
-
 	conf := aws.Config{
 		Credentials: credentials.NewStaticCredentials(
 			config.GetStorageS3AccessKey(),
@@ -54,18 +51,6 @@ func NewS3Storage() *S3Storage {
 	return &S3Storage{
 		sess: sess,
 		sc:   sc,
-	}
-}
-
-func checkLimit() {
-	var nofiles syscall.Rlimit
-	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &nofiles)
-	if err != nil {
-		log.Panic().Err(err).Msg("Cannot Check File Descriptors")
-	}
-
-	if nofiles.Cur < 65535 {
-		log.Panic().Uint64("current", nofiles.Cur).Msg("S3 Implementation Requires File Limits To Be Above 65534")
 	}
 }
 
@@ -336,4 +321,12 @@ func (s2 S3Storage) GetObject(s string, hash plumbing.Hash) (storage.Object, err
 	}
 
 	return o, nil
+}
+
+func (s2 S3Storage) Lock(string) (lock.Lock, error) {
+	return nil, nil
+}
+
+func (s2 S3Storage) Unlock(lock.Lock) error {
+	return nil
 }

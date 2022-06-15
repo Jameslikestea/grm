@@ -2,7 +2,7 @@ package memory
 
 import (
 	"errors"
-
+	"github.com/Jameslikestea/d-badger/lock"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gocql/gocql"
 
@@ -86,4 +86,12 @@ func (m MemoryStorage) ListObjects(repo string) ([]storage.Object, error) {
 	}
 
 	return l, nil
+}
+
+func (m MemoryStorage) Lock(db string) (lock.Lock, error) {
+	return nil, nil
+}
+
+func (m MemoryStorage) Unlock(lock lock.Lock) error {
+	return nil
 }

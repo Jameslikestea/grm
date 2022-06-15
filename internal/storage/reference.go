@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Jameslikestea/d-badger/lock"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gocql/gocql"
@@ -51,4 +52,7 @@ type Storage interface {
 
 	GenerateHashKey() error
 	GetHashKey() ([]HashKey, error)
+
+	Lock(db string) (lock.Lock, error)
+	Unlock(lock.Lock) error
 }
