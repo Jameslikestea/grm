@@ -22,7 +22,7 @@ require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/leodido/go-conventionalcommits v0.9.0
 	github.com/minio/minio-go/v7 v7.0.23
-	github.com/open-policy-agent/opa v0.42.0
+	github.com/open-policy-agent/opa v0.43.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 )
